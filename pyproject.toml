@@ -1,0 +1,44 @@
+[project]
+name = "hiro-agent"
+version = "0.1.0"
+description = "A small, recoverable, plugin-based coding agent harness"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "httpx>=0.28,<1",
+    "pydantic>=2.10,<3",
+    "typer>=0.15,<1",
+    "rich>=13.9,<15",
+    "prompt-toolkit>=3.0.48,<4",
+]
+
+[project.scripts]
+hiro-agent = "hiro_agent.cli:app"
+
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = ["pytest>=8.3", "pytest-asyncio>=0.25", "ruff>=0.9", "mypy>=1.14"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+# Local file effects stay synchronous so cancellation cannot leave a worker
+# thread modifying files after its tool result has been settled.
+ignore = ["ASYNC240", "ASYNC109"]
+
+[tool.mypy]
+python_version = "3.13"
+files = ["src"]
+check_untyped_defs = true
+disallow_untyped_defs = true
+warn_unused_ignores = true

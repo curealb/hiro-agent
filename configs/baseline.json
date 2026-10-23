@@ -1,0 +1,33 @@
+{
+  "model": {
+    "adapter": "compatible",
+    "base_url": "https://api.openai.com/v1",
+    "model": "",
+    "api_key_env": "HIRO_API_KEY",
+    "request_timeout_seconds": 120,
+    "extra_body": {}
+  },
+  "budget": {
+    "max_model_requests": 64,
+    "max_tool_calls": 128,
+    "timeout_seconds": 600
+  },
+  "tools": {
+    "max_output_chars": 32768,
+    "max_file_bytes": 1048576,
+    "max_search_files": 2000,
+    "command_timeout_seconds": 60
+  },
+  "permissions": "ask-write",
+  "subagents": {
+    "enabled": false,
+    "max_concurrency": 2,
+    "max_model_requests": 16,
+    "max_tool_calls": 32,
+    "max_output_chars": 16000,
+    "roles": {
+      "explorer": {"model": null, "instructions": ""},
+      "reviewer": {"model": null, "instructions": ""}
+    }
+  }
+}

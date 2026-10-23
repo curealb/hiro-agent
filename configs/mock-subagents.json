@@ -1,0 +1,15 @@
+{
+  "model": {"adapter": "mock"},
+  "permissions": "ask-write",
+  "subagents": {
+    "enabled": true,
+    "max_concurrency": 2,
+    "max_model_requests": 16,
+    "max_tool_calls": 32,
+    "max_output_chars": 16000,
+    "roles": {
+      "explorer": {"model": null, "instructions": "优先指出文件内容与路径证据。"},
+      "reviewer": {"model": null, "instructions": "说明静态审查的范围和未验证事项。"}
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "model": {"adapter": "mock"},
+  "budget": {
+    "max_model_requests": 3,
+    "max_tool_calls": 128,
+    "timeout_seconds": 600
+  },
+  "permissions": "ask-write",
+  "subagents": {
+    "enabled": true,
+    "max_concurrency": 2
+  }
+}

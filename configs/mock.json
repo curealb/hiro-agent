@@ -1,0 +1,4 @@
+{
+  "model": {"adapter": "mock"},
+  "permissions": "ask-write"
+}
