@@ -57,9 +57,16 @@ async def create_harness(
         runtime.events.subscribe(observer)
 
     async def session_setup(ctx: PluginContext) -> None:
-        session = await JsonlSession.open(workspace, session_id)
+        try:
+            # A selected journal can be deleted after the existence check.
+            # Resuming must never recreate it after the deletion lock releases.
+            session = await JsonlSession.open(workspace, session_id, create=session_id is None)
+        except FileNotFoundError:
+            raise HiroError("指定的会话不存在，请使用 sessions 查看当前工作区的会话") from None
         ctx.on_dispose(session.close)
         ctx.provide("session", session)
+        if not session.events:
+            await session.append("session.created", {"workspace": str(workspace)})
         if any(event.type == "subagent.created" for event in session.events):
             raise HiroError("子会话不能直接续跑，请打开对应的父会话")
         await recover_delegations(workspace, session, config.subagents.max_output_chars)

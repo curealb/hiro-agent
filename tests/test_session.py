@@ -334,7 +334,8 @@ async def test_valid_json_prefixes_are_repairable() -> None:
         assert _partial_json(raw[:index]), raw[:index]
 
 
-async def test_recovery_preserves_durable_usage_and_tool_metrics() -> None:
+@pytest.mark.parametrize("cached_input_tokens", [None, 0, 40])
+async def test_recovery_preserves_durable_usage_and_tool_metrics(cached_input_tokens) -> None:
     from datetime import UTC, datetime, timedelta
 
     from hiro_agent.contracts import RunMetrics
@@ -350,7 +351,15 @@ async def test_recovery_preserves_durable_usage_and_tool_metrics() -> None:
             "attempt_id": "used",
             "message": AssistantMessage(tool_calls=calls).model_dump(),
             "finish_reason": "tool_calls",
-            "usage": {"input_tokens": 100, "output_tokens": 7},
+            "usage": {
+                "input_tokens": 100,
+                "output_tokens": 7,
+                **(
+                    {"cached_input_tokens": cached_input_tokens}
+                    if cached_input_tokens is not None
+                    else {}
+                ),
+            },
         },
         "metrics-run",
     )
@@ -389,9 +398,66 @@ async def test_recovery_preserves_durable_usage_and_tool_metrics() -> None:
             input_tokens=100,
             output_tokens=7,
             usage_missing=1,
+            cached_input_tokens=cached_input_tokens or 0,
+            cache_reported_input_tokens=100 if cached_input_tokens is not None else 0,
+            cache_usage_missing=1 if cached_input_tokens is not None else 2,
             elapsed_ms=8000,
         ).model_dump()
     )
+
+
+@pytest.mark.parametrize("legacy_child_metrics", [False, True])
+async def test_recovery_preserves_delegated_cache_totals_once(legacy_child_metrics):
+    from hiro_agent.contracts import DelegationLink, RunMetrics
+
+    session = MemorySession("parent")
+    run_id = "parent-run"
+    call = ToolCall(id="delegate", name="delegate_task", arguments="{}")
+    await session.append("run.started", {}, run_id)
+    await session.append(
+        "assistant.message",
+        {
+            "message": AssistantMessage(tool_calls=[call]).model_dump(),
+            "usage": {"input_tokens": 8, "output_tokens": 2, "cached_input_tokens": 3},
+        },
+        run_id,
+    )
+    await session.append("tool.called", {"call": call.model_dump()}, run_id)
+    await session.append("tool.started", {"call": call.model_dump()}, run_id)
+    link = DelegationLink(
+        call_id=call.id,
+        parent_session_id=session.session_id,
+        parent_run_id=run_id,
+        child_session_id="child",
+        child_run_id="child-run",
+        role="explorer",
+    )
+    await session.append("delegation.started", link.model_dump(), run_id)
+    child_metrics = {"worker_steps": 2, "input_tokens": 12, "output_tokens": 5}
+    if not legacy_child_metrics:
+        child_metrics.update(
+            cached_input_tokens=7, cache_reported_input_tokens=12, cache_usage_missing=0
+        )
+    await session.append(
+        "delegation.finished",
+        {
+            "call_id": call.id,
+            "result": ToolResult(call_id=call.id, ok=True).model_dump(),
+            "metrics": child_metrics,
+        },
+        run_id,
+    )
+    assert len(await recover_session(session)) == 1
+    metrics = RunMetrics.model_validate(session.events[-1].data["metrics"])
+    assert metrics.input_tokens == 20
+    assert metrics.output_tokens == 7
+    assert metrics.worker_steps == 3
+    assert metrics.cached_input_tokens == (3 if legacy_child_metrics else 10)
+    assert metrics.cache_reported_input_tokens == (8 if legacy_child_metrics else 20)
+    assert metrics.cache_usage_missing == (2 if legacy_child_metrics else 0)
+    before = session.events
+    assert await recover_session(session) == []
+    assert session.events == before
 
 
 async def test_repeated_recovery_excludes_offline_gap_from_elapsed_metrics() -> None:

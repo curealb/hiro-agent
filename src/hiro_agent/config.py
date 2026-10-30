@@ -16,12 +16,13 @@ class ModelConfig(DataModel):
     model: str = ""
     api_key_env: str = "HIRO_API_KEY"
     request_timeout_seconds: float = Field(default=120, gt=0)
+    stream: bool = True
     extra_body: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("extra_body")
     @classmethod
     def validate_extra_body(cls, value: dict[str, Any]) -> dict[str, Any]:
-        forbidden = {"messages", "tools", "stream", "model", "n", "api_key"}
+        forbidden = {"messages", "tools", "stream", "stream_options", "model", "n", "api_key"}
         if forbidden.intersection(value):
             raise ValueError("extra_body cannot override protocol or credential fields")
         return value

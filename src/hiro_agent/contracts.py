@@ -7,9 +7,9 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from hiro_agent.errors import PersistenceError, RunCancelled
 
@@ -44,6 +44,30 @@ class Message(DataModel):
 class Usage(DataModel):
     input_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
+    cached_input_tokens: int | None = Field(default=None, ge=0, strict=True)
+
+    @model_validator(mode="after")
+    def validate_cached_input(self) -> Self:
+        if self.cached_input_tokens is not None and self.cached_input_tokens > self.input_tokens:
+            raise ValueError("Cached input tokens cannot exceed input tokens")
+        return self
+
+
+def usage_counts(usage: Usage | None) -> dict[str, int]:
+    """Counters for one completed response; cached tokens are part of input."""
+    counts = {"worker_steps": 1}
+    if usage is None:
+        counts.update(usage_missing=1, cache_usage_missing=1)
+    else:
+        counts.update(input_tokens=usage.input_tokens, output_tokens=usage.output_tokens)
+        if usage.cached_input_tokens is None:
+            counts["cache_usage_missing"] = 1
+        else:
+            counts.update(
+                cached_input_tokens=usage.cached_input_tokens,
+                cache_reported_input_tokens=usage.input_tokens,
+            )
+    return counts
 
 
 class ModelRequest(DataModel):
@@ -96,7 +120,22 @@ class RunMetrics(DataModel):
     input_tokens: int = 0
     output_tokens: int = 0
     usage_missing: int = 0
+    cached_input_tokens: int = 0
+    cache_reported_input_tokens: int = 0
+    cache_usage_missing: int = 0
     elapsed_ms: int = 0
+
+    @model_validator(mode="before")
+    @classmethod
+    def preserve_unknown_legacy_cache(cls, value: Any) -> Any:
+        # Older completed runs and delegation summaries have no cache telemetry.
+        if isinstance(value, dict) and not {
+            "cached_input_tokens",
+            "cache_reported_input_tokens",
+            "cache_usage_missing",
+        }.intersection(value):
+            return {**value, "cache_usage_missing": value.get("worker_steps", 0)}
+        return value
 
 
 class RunResult(DataModel):
@@ -179,6 +218,15 @@ class ToolExecutionContext:
 class ModelService(Protocol):
     async def complete(self, request: ModelRequest) -> ModelResponse: ...
     async def close(self) -> None: ...
+
+
+@runtime_checkable
+class StreamingModelService(Protocol):
+    """Optional capability; callbacks carry transient public text, not tool calls."""
+
+    async def complete_stream(
+        self, request: ModelRequest, on_delta: Callable[[str], None]
+    ) -> ModelResponse: ...
 
 
 class SessionService(Protocol):

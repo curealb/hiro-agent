@@ -94,7 +94,8 @@ async def test_compatible_preserves_text_calls_usage_and_api_prefix() -> None:
         assert json.loads(requests[0].content) == {
             "model": "test-model",
             "temperature": 0.2,
-            "stream": False,
+            "stream": True,
+            "stream_options": {"include_usage": True},
             "n": 1,
             "messages": [
                 {"role": "system", "content": "system"},
@@ -136,6 +137,54 @@ async def test_length_keeps_incomplete_arguments_and_missing_usage() -> None:
     assert result.finish_reason == "length"
     assert result.assistant.tool_calls[0].arguments == '{"path":'
     assert result.usage is None
+
+
+@pytest.mark.parametrize(
+    "cache_fields,expected",
+    [
+        ({}, None),
+        ({"prompt_tokens_details": None}, None),
+        ({"prompt_tokens_details": {}}, None),
+        ({"prompt_tokens_details": {"cached_tokens": None}}, None),
+        ({"prompt_tokens_details": {"cached_tokens": 0}}, 0),
+        ({"prompt_tokens_details": {"cached_tokens": 8}}, 8),
+        ({"prompt_cache_hit_tokens": 0}, 0),
+        ({"prompt_cache_hit_tokens": 8}, 8),
+        ({"prompt_tokens_details": None, "prompt_cache_hit_tokens": 8}, 8),
+        (
+            {"prompt_tokens_details": {"cached_tokens": None}, "prompt_cache_hit_tokens": 8},
+            8,
+        ),
+        ({"prompt_tokens_details": {"cached_tokens": 0}, "prompt_cache_hit_tokens": 8}, 0),
+    ],
+)
+async def test_cache_usage_preserves_known_zero_and_provider_fallback(cache_fields, expected):
+    payload = completion()
+    payload["usage"] = {"prompt_tokens": 12, "completion_tokens": 4, **cache_fields}
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))
+    ) as client:
+        response = await CompatibleModel(config(), client).complete(ModelRequest(messages=[]))
+    assert response.usage is not None
+    assert response.usage.cached_input_tokens == expected
+    assert response.usage.input_tokens + response.usage.output_tokens == 16
+
+
+@pytest.mark.parametrize("cached", [True, -1, 1.0, "1", 13])
+@pytest.mark.parametrize("provider", ["openai", "deepseek"])
+async def test_malformed_cache_usage_is_rejected(cached, provider):
+    cache_fields = (
+        {"prompt_tokens_details": {"cached_tokens": cached}}
+        if provider == "openai"
+        else {"prompt_cache_hit_tokens": cached}
+    )
+    payload = completion()
+    payload["usage"] = {"prompt_tokens": 12, "completion_tokens": 4, **cache_fields}
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))
+    ) as client:
+        with pytest.raises(ModelError):
+            await CompatibleModel(config(), client).complete(ModelRequest(messages=[]))
 
 
 async def test_continuation_metadata_stays_out_of_provider_protocol() -> None:
@@ -196,7 +245,9 @@ def test_validates_model_env_name_and_key(monkeypatch: pytest.MonkeyPatch) -> No
     assert "secret" not in str(error.value)
 
 
-@pytest.mark.parametrize("field", ["messages", "tools", "stream", "model", "n", "api_key"])
+@pytest.mark.parametrize(
+    "field", ["messages", "tools", "stream", "stream_options", "model", "n", "api_key"]
+)
 def test_reserved_extra_fields_rejected(field: str) -> None:
     with pytest.raises(ValidationError):
         config(extra_body={field: "override"})

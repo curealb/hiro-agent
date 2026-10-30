@@ -6,6 +6,7 @@ __pycache__/
 .ruff_cache/
 dist/
 *.egg-info/
+# Local conversation history and session locks
 .hiro-agent/
 .env
 .coverage

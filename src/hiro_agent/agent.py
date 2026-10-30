@@ -18,8 +18,10 @@ from hiro_agent.contracts import (
     RunScope,
     RunStatus,
     SessionService,
+    StreamingModelService,
     TaskPreprocessor,
     ToolsService,
+    usage_counts,
 )
 from hiro_agent.core import EventBus
 from hiro_agent.errors import (
@@ -196,6 +198,7 @@ class Agent:
                     )
                     budget.claim_model()
                     attempt_id = uuid.uuid4().hex
+                    output = ""
                     self._state(RunStatus.REQUESTING_MODEL)
                     await self.session.append(
                         "model.requested",
@@ -206,14 +209,29 @@ class Agent:
                         },
                         run_id,
                     )
+                    self._emit("model.requested", {"attempt_id": attempt_id})
+
+                    def on_delta(text: str, *, current_attempt: str = attempt_id) -> None:
+                        self._check(budget)
+                        if text:
+                            self._emit(
+                                "assistant.delta", {"attempt_id": current_attempt, "text": text}
+                            )
+
                     try:
+                        completion = (
+                            self.model.complete_stream(request, on_delta)
+                            if isinstance(self.model, StreamingModelService)
+                            else self.model.complete(request)
+                        )
                         response = await cancellable(
-                            self.model.complete(request), self._cancellation, budget.remaining
+                            completion, self._cancellation, budget.remaining
                         )
                     except (RunCancelled, BudgetExceeded, asyncio.CancelledError):
                         await self.session.append(
                             "model.interrupted", {"attempt_id": attempt_id}, run_id
                         )
+                        self._emit("model.interrupted", {"attempt_id": attempt_id})
                         raise
                     except Exception as exc:
                         if isinstance(exc, PersistenceError):
@@ -223,6 +241,7 @@ class Agent:
                             {"attempt_id": attempt_id, "error": type(exc).__name__},
                             run_id,
                         )
+                        self._emit("model.failed", {"attempt_id": attempt_id})
                         raise
                     await self.session.append(
                         "assistant.message",
@@ -234,15 +253,15 @@ class Agent:
                         },
                         run_id,
                     )
-                    budget.record(worker_steps=1)
-                    if response.usage:
-                        budget.record(
-                            input_tokens=response.usage.input_tokens,
-                            output_tokens=response.usage.output_tokens,
-                        )
-                    else:
-                        budget.record(usage_missing=1)
-                    self._emit("model.finished", {"finish_reason": response.finish_reason})
+                    budget.record(**usage_counts(response.usage))
+                    self._emit(
+                        "model.finished",
+                        {
+                            "attempt_id": attempt_id,
+                            "finish_reason": response.finish_reason,
+                            "usage": response.usage.model_dump() if response.usage else None,
+                        },
+                    )
                     output = response.assistant.text or ""
                     if response.finish_reason == "length":
                         status = RunStatus.PAUSED

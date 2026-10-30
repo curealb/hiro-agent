@@ -6,6 +6,7 @@ import json
 import os
 import re
 from collections import deque
+from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlsplit
 from uuid import uuid4
@@ -22,9 +23,10 @@ from hiro_agent.contracts import (
     Usage,
 )
 from hiro_agent.errors import ConfigurationError, ContextLimitError, ModelError
+from hiro_agent.streaming import collect_stream
 
 _MAX_RESPONSE_BYTES = 8 * 1024 * 1024
-_RESERVED_BODY_FIELDS = {"messages", "tools", "stream", "model", "n", "api_key"}
+_RESERVED_BODY_FIELDS = {"messages", "tools", "stream", "stream_options", "model", "n", "api_key"}
 
 
 def _endpoint(base_url: str) -> str:
@@ -137,7 +139,17 @@ def _parse_response(body: Any) -> ModelResponse:
                 or output_tokens < 0
             ):
                 raise ValueError
-            usage = Usage(input_tokens=input_tokens, output_tokens=output_tokens)
+            details = raw_usage.get("prompt_tokens_details")
+            if details is not None and not isinstance(details, dict):
+                raise ValueError
+            cached_input_tokens = details.get("cached_tokens") if details is not None else None
+            if cached_input_tokens is None:
+                cached_input_tokens = raw_usage.get("prompt_cache_hit_tokens")
+            usage = Usage(
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                cached_input_tokens=cached_input_tokens,
+            )
         metadata = {
             key: value
             for key, value in message.items()
@@ -153,7 +165,7 @@ def _parse_response(body: Any) -> ModelResponse:
 
 
 class CompatibleModel:
-    """Non-streaming Chat Completions over any explicitly configured API prefix."""
+    """Chat Completions over any explicitly configured API prefix."""
 
     def __init__(self, config: ModelConfig, client: httpx.AsyncClient | None = None) -> None:
         self._url = _endpoint(config.base_url)
@@ -172,19 +184,32 @@ class CompatibleModel:
         self._extra_body = dict(config.extra_body)
         self._api_key = api_key
         self._timeout = config.request_timeout_seconds
+        self._stream = config.stream
         self._owns_client = client is None
         self._client = client if client is not None else httpx.AsyncClient(follow_redirects=False)
 
     async def complete(self, request: ModelRequest) -> ModelResponse:
+        return await self._complete(request, None)
+
+    async def complete_stream(
+        self, request: ModelRequest, on_delta: Callable[[str], None]
+    ) -> ModelResponse:
+        return await self._complete(request, on_delta)
+
+    async def _complete(
+        self, request: ModelRequest, on_delta: Callable[[str], None] | None
+    ) -> ModelResponse:
         body: dict[str, Any] = {
             **self._extra_body,
             "model": self._model,
             "messages": [_wire_message(message) for message in request.messages],
-            "stream": False,
+            "stream": self._stream,
             "n": 1,
         }
         if request.tools:
             body["tools"] = request.tools
+        if self._stream:
+            body["stream_options"] = {"include_usage": True}
         try:
             async with self._client.stream(
                 "POST",
@@ -194,6 +219,16 @@ class CompatibleModel:
                 timeout=self._timeout,
                 follow_redirects=False,
             ) as response:
+                content_type = response.headers.get("content-type", "").split(";", 1)[0].strip()
+                if (
+                    200 <= response.status_code < 300
+                    and self._stream
+                    and content_type.lower() == "text/event-stream"
+                ):
+                    envelope = await collect_stream(
+                        response.aiter_bytes(), _MAX_RESPONSE_BYTES, on_delta
+                    )
+                    return _parse_response(envelope)
                 payload = bytearray()
                 async for chunk in response.aiter_bytes():
                     if len(payload) + len(chunk) > _MAX_RESPONSE_BYTES:

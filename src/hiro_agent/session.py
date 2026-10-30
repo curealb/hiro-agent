@@ -8,8 +8,11 @@ import fcntl
 import json
 import os
 import re
+import stat
 import uuid
+from contextlib import ExitStack
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +29,7 @@ from hiro_agent.contracts import (
     ToolCall,
     ToolResult,
     Usage,
+    usage_counts,
 )
 from hiro_agent.errors import PersistenceError
 
@@ -751,13 +755,13 @@ def _recovered_metrics(events: list[SessionEvent], run_id: str) -> RunMetrics:
             case "model.requested":
                 metrics.model_requests += 1
             case "assistant.message":
-                metrics.worker_steps += 1
-                if event.data.get("usage") is None:
-                    metrics.usage_missing += 1
-                else:
-                    usage = Usage.model_validate(event.data["usage"])
-                    metrics.input_tokens += usage.input_tokens
-                    metrics.output_tokens += usage.output_tokens
+                usage = (
+                    Usage.model_validate(event.data["usage"])
+                    if event.data.get("usage") is not None
+                    else None
+                )
+                for name, count in usage_counts(usage).items():
+                    setattr(metrics, name, getattr(metrics, name) + count)
             case "tool.called":
                 metrics.tool_calls += int(event.data.get("accepted", True))
             case "tool.result":
@@ -830,12 +834,110 @@ def read_session_events(workspace: Path, session_id: str) -> list[SessionEvent]:
             os.close(lock_fd)
 
 
+def delete_session(workspace: Path, session_id: str) -> None:
+    """Remove a closed parent and its children after locking and validating all logs.
+
+    Stable lock files are deliberately retained: unlinking a lock file could let
+    another process acquire a new inode while an existing opener holds the old one.
+    """
+    if not isinstance(session_id, str) or not _SESSION_ID.fullmatch(session_id):
+        raise PersistenceError("会话删除失败：Session ID 不合法。")
+    try:
+        with ExitStack() as stack:
+            flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+            workspace_fd = os.open(Path(workspace).resolve(strict=True), flags)
+            stack.callback(os.close, workspace_fd)
+            parent_fd = os.open(".hiro-agent", flags, dir_fd=workspace_fd)
+            stack.callback(os.close, parent_fd)
+            directory_fd = os.open("sessions", flags, dir_fd=parent_fd)
+            stack.callback(os.close, directory_fd)
+            opened: dict[str, int] = {}
+            journals: list[str] = []
+
+            def open_file(name: str) -> int:
+                fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory_fd)
+                stack.callback(os.close, fd)
+                if not stat.S_ISREG(os.fstat(fd).st_mode):
+                    raise PersistenceError("会话删除失败：日志或锁文件不是普通文件。")
+                opened[name] = fd
+                return fd
+
+            def read_locked(
+                target_id: str, *, missing_ok: bool = False
+            ) -> list[SessionEvent] | None:
+                journal_name = f"{target_id}.jsonl"
+                try:
+                    lock_fd = open_file(f"{target_id}.lock")
+                except FileNotFoundError:
+                    if missing_ok:
+                        try:
+                            os.stat(journal_name, dir_fd=directory_fd, follow_symlinks=False)
+                        except FileNotFoundError:
+                            return None
+                    raise
+                try:
+                    fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    raise PersistenceError(
+                        "会话删除失败：会话或关联子会话正在使用，请关闭后重试。"
+                    ) from None
+                try:
+                    journal_fd = open_file(journal_name)
+                except FileNotFoundError:
+                    if missing_ok:
+                        return None
+                    raise
+                events = _read_events(journal_fd, target_id, repair=False)
+                journals.append(journal_name)
+                return events
+
+            events = read_locked(session_id)
+            assert events is not None
+            if any(event.type == "subagent.created" for event in events):
+                raise PersistenceError("会话删除失败：子会话不能单独删除，请选择对应的主会话。")
+            children: dict[str, DelegationLink] = {}
+            for event in events:
+                if event.type != "delegation.started":
+                    continue
+                link = DelegationLink.model_validate(event.data)
+                previous = children.setdefault(link.child_session_id, link)
+                if previous != link:
+                    raise PersistenceError("会话删除失败：同一子会话存在冲突的委派关联。")
+            for child_id, link in sorted(children.items()):
+                child_events = read_locked(child_id, missing_ok=True)
+                if child_events is None:
+                    continue
+                reciprocal = [event for event in child_events if event.type == "subagent.created"]
+                if reciprocal:
+                    if DelegationLink.model_validate(reciprocal[0].data) != link:
+                        raise PersistenceError("会话删除失败：父子会话委派关联不一致。")
+                elif any(event.type != "session.created" for event in child_events):
+                    raise PersistenceError("会话删除失败：子会话缺少父任务关联记录。")
+
+            # All targets are locked and validated before removing any journal.
+            # Directory-relative operations also avoid following replaced parent paths.
+            for name, fd in opened.items():
+                current = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+                if not os.path.samestat(os.fstat(fd), current):
+                    raise PersistenceError("会话删除失败：日志或锁文件已变化，请重试。")
+            for name in reversed(journals):
+                os.unlink(name, dir_fd=directory_fd)
+            os.fsync(directory_fd)
+    except PersistenceError as exc:
+        if str(exc).startswith("会话删除失败"):
+            raise
+        raise PersistenceError("会话删除失败：日志损坏，无法确认父子关联。") from exc
+    except OSError as exc:
+        raise PersistenceError("会话删除失败：日志不存在、路径不安全或无法访问。") from exc
+
+
 def list_sessions(workspace: Path) -> list[dict[str, Any]]:
     """Return read-only metadata; busy or corrupt journals are never repaired here."""
     directory = Path(workspace).resolve() / ".hiro-agent" / "sessions"
     if directory.is_symlink() or directory.parent.is_symlink() or not directory.is_dir():
         return []
     summaries: list[dict[str, Any]] = []
+    updated_at: dict[str, datetime] = {}
     for path in sorted(directory.glob("*.jsonl")):
         session_id = path.stem
         if not _SESSION_ID.fullmatch(session_id):
@@ -856,7 +958,12 @@ def list_sessions(workspace: Path) -> list[dict[str, Any]]:
             is_child = any(event.type == "subagent.created" for event in events)
             if is_child:
                 continue
+            tasks = [event for event in events if event.type == "task.received"]
+            title = " ".join(tasks[0].data["text"].split()) if tasks else ""
+            summary["title"] = title if len(title) <= 80 else title[:79] + "…"
+            summary["task_count"] = len(tasks)
             if events:
+                updated_at[session_id] = events[-1].timestamp
                 summary["updated_at"] = events[-1].timestamp.isoformat()
                 summary["workspace"] = events[0].data.get("workspace")
                 summary["status"] = "idle"
@@ -874,4 +981,10 @@ def list_sessions(workspace: Path) -> list[dict[str, Any]]:
                 os.close(lock_fd)
             if not is_child:
                 summaries.append(summary)
-    return summaries
+    # The initial path order breaks ties by ID. Compare aware datetimes rather
+    # than ISO strings, which can order different timezone offsets incorrectly.
+    return sorted(
+        summaries,
+        key=lambda summary: updated_at.get(summary["session_id"], datetime.min.replace(tzinfo=UTC)),
+        reverse=True,
+    )

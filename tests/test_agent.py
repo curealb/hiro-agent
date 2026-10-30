@@ -268,6 +268,40 @@ async def test_usage_and_missing_usage_are_separate(tmp_path):
     assert result.metrics.input_tokens == 10
     assert result.metrics.output_tokens == 4
     assert result.metrics.usage_missing == 1
+    assert result.metrics.cache_usage_missing == 2
+    assert result.metrics.cache_reported_input_tokens == 0
+
+
+async def test_model_finished_reports_each_durable_response_usage_once(tmp_path):
+    agent, session, _ = harness(
+        tmp_path,
+        [
+            response(
+                call("list_files", {}),
+                usage=Usage(input_tokens=10, output_tokens=4, cached_input_tokens=0),
+            ),
+            response(
+                text="done", usage=Usage(input_tokens=20, output_tokens=5, cached_input_tokens=8)
+            ),
+        ],
+    )
+    observed = []
+    agent.events.subscribe(lambda name, data: observed.append((name, data)))
+    result = await agent.run("test")
+    assert result.metrics.cached_input_tokens == 8
+    assert result.metrics.cache_reported_input_tokens == 30
+    assert result.metrics.cache_usage_missing == 0
+    assert result.metrics.input_tokens + result.metrics.output_tokens == 39
+    finished = [data for name, data in observed if name == "model.finished"]
+    durable = [event for event in session.events if event.type == "assistant.message"]
+    assert len(finished) == len(durable) == 2
+    assert len({data["attempt_id"] for data in finished}) == 2
+    for data, event in zip(finished, durable, strict=True):
+        assert data["attempt_id"] == event.data["attempt_id"]
+        assert data["usage"] == event.data["usage"]
+        assert data["finish_reason"] == event.data["finish_reason"]
+        assert data["session_id"] == session.session_id
+        assert data["run_id"] == result.run_id
 
 
 async def test_empty_crashed_new_run_does_not_continue_prior_completed_task(tmp_path):

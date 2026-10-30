@@ -2,7 +2,7 @@
 
 [返回项目首页](../README.md)
 
-一个 Python + uv 管理的、CLI 优先的 Coding Harness。主 Agent 可按需并行委派只读子 Agent，普通工具顺序执行、模型非流式调用；通过服务契约与插件生命周期拆分模型、执行、权限和会话。当前支持 Linux / Python 3.12 及以上版本。
+一个 Python + uv 管理的、CLI 优先的 Coding Harness。主 Agent 可按需并行委派只读子 Agent，普通工具顺序执行、真实模型默认流式返回；通过服务契约与插件生命周期拆分模型、执行、权限和会话。当前支持 Linux / Python 3.12 及以上版本。
 
 ## 快速开始
 
@@ -104,11 +104,21 @@ uv run hiro-agent --workspace /path/to/your/project
 
 `configs/baseline.json` 展示全部配置。CLI 的 `--mock` 优先选择 Mock；`HIRO_BASE_URL`、`HIRO_MODEL` 覆盖配置中的对应路由，密钥从 `api_key_env` 指定的环境变量读取。没有模型名称或密钥时会明确报错。
 
-`model.extra_body` 可配置供应商支持的可选请求参数，如 `max_completion_tokens`；部分兼容服务仍使用 `max_tokens`，应按所选服务设置。它不能覆盖模型、消息、工具、stream、n 或密钥。首版不透传供应商专用推理消息字段、不支持图片与流式输出；需要特殊回传字段的模型应增加专用 Adapter。
+`model.extra_body` 可配置供应商支持的可选请求参数，如 `max_completion_tokens`；部分兼容服务仍使用 `max_tokens`，应按所选服务设置。它不能覆盖模型、消息、工具、stream、stream_options、n 或密钥。首版不透传供应商专用推理消息字段、不支持图片；需要特殊回传字段的模型应增加专用 Adapter。
+
+`model.stream` 默认为 `true`，使用 Chat Completions 的 [SSE 流式返回与 `include_usage`](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)。正文增量会在交互终端逐步显示，工具调用参数按索引合并；收到结束标记并校验完整响应后，才持久化消息、统计用量并交给工具执行器。不会输出供应商的推理元数据。子任务共享同样的流式协议，但不会把其正文碎片混入主 Agent 回复。
+
+不支持流式的服务可以设置 `model.stream: false`，例如在基线配置的 `model` 对象中添加 `"stream": false`。如果服务在流式请求后直接返回标准 JSON，Hiro 会处理该完整响应；服务拒绝流式请求时不会自动重试，修改配置后再发起任务。Mock 和只实现 `complete()` 的自定义模型仍可使用完整响应接口。
+
+断流、超时或取消会关闭当前请求。已显示但未完成的正文标记为“输出未完成”，不会作为完整 assistant 消息加入模型历史，也不会执行其中的工具调用；可重新输入任务或用 `/continue` 继续。长回复在生成期间显示尾部预览，结束后输出完整正文；管道和重定向输出保留完整响应与静态统计。
+
+交互终端会将回复中的 Markdown 渲染为标题、强调、列表、表格、行内代码和语法高亮代码块，按终端宽度换行。流式预览最多显示 12 行；正文超过 4,000 字符后，预览使用纯文本尾部，避免丢失代码围栏开头造成错误格式。完整回复始终按 Markdown 渲染，Session 记录与管道、重定向输出保留原始 Markdown 文本。
 
 网络请求不自动重试。请求错误结束当前 Run，历史保留；上下文超限和输出长度截断暂停，截断响应中的工具不会执行。当前 Context 保留完整历史，不自动摘要或裁剪旧消息。
 
 ## 聊天、取消与续跑
+
+交互终端顶部显示模型、工作区与 Session，输入区使用独立的深色背景。输入 `/` 后，命令及中文说明在输入框上方展开，默认高亮第一项；继续输入前缀可筛选候选项。使用 `↑` / `↓` 切换，`Enter` 执行，`Tab` 补全，`Esc` 收起菜单，也可以直接输入完整命令。审批提示不启用命令菜单。
 
 | 操作 | 行为 |
 | --- | --- |
@@ -116,13 +126,27 @@ uv run hiro-agent --workspace /path/to/your/project
 | `/help` | 显示帮助 |
 | `/continue` | 继续最近未完成任务，新 Run、新预算，不重复原始任务 |
 | `/tasks` | 空闲时查看当前 Session 最近一个 Run 的委派任务 |
+| `/resume` | 打开历史列表，↑/↓ 选择，Enter 恢复，Delete 或 d 删除，Esc 退出 |
+| `/resume SESSION_ID` | 直接切换到指定会话，显示已有对话 |
+| `/resume --last` | 切换到最近有任务记录的其他可读取会话 |
 | `/exit` 或空闲 Ctrl+D | 退出并关闭会话 |
 | 空闲 Ctrl+C | 清空输入，继续聊天 |
 | 执行或审批时 Ctrl+C | 取消当前 Run，等待工具清理后返回输入提示 |
 
 运行期间只接受当前审批，不排队接收新任务。审批显示文件路径、写入内容或精确替换参数，以及完整的可执行文件和参数；回车、`n` 或 EOF 表示拒绝。只有明确输入 `y` / `yes` 才授权一次操作。
 
+### 运行状态与用量
+
+交互终端执行任务时显示旋转动画、当前阶段（等待模型、执行工具或运行子任务）、耗时和当前 Run 的 Token 用量。输入、输出与总量包含子 Agent，缓存命中的 Token 已包含在输入中，不重复计入总量。审批输入期间暂停动画，审批结束后恢复；取消、失败、暂停或完成后清理动画并保留本轮汇总。管道和重定向输出只保留静态结果。
+
+正文、动画和耗时持续刷新；Token 与缓存数值使用服务返回的最终 usage，在每轮响应完成后更新，不按文本片段估算 Token。第一轮用量返回前显示等待统计，服务未提供数据时显示“未提供”；部分响应缺少数据时，界面会标注部分统计，不把未知用量当作零。
+
+缓存统计读取 [OpenAI 的 `usage.prompt_tokens_details.cached_tokens`](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)，并兼容 [DeepSeek 的 `usage.prompt_cache_hit_tokens`](https://api-docs.deepseek.com/guides/kv_cache/)。命中率为已报告缓存的请求中「缓存输入 Token / 输入 Token」，不混入缺少缓存信息的请求。统计仅展示服务实际返回的缓存情况，不会强制启用供应商缓存，也不估算费用。
+
 ```bash
+uv run hiro-agent resume --workspace /path/to/your/project
+uv run hiro-agent resume --last --workspace /path/to/your/project
+uv run hiro-agent resume SESSION_ID --workspace /path/to/your/project
 uv run hiro-agent sessions --workspace /path/to/your/project
 uv run hiro-agent tasks --session SESSION_ID --workspace /path/to/your/project
 uv run hiro-agent tasks --session SESSION_ID --run RUN_ID --workspace /path/to/your/project
@@ -131,7 +155,13 @@ uv run hiro-agent chat --resume SESSION_ID --workspace /path/to/your/project
 
 `tasks` 默认显示该主 Session 的全部委派，可按 Run 筛选；展示任务简述、角色、模型标识、等待/运行/终态、子会话、局部模型与工具次数、报告摘要。查询只读取已有日志，不调用模型、不修复记录、不启动恢复；日志损坏或被占用时明确报不可读取。运行期间通过事件持续输出进度，不提供终端任务面板或输入队列。
 
-打开会话后先恢复日志并等待输入，不会自动启动模型。使用 `/continue` 明确续跑，或输入新任务保留历史。一个会话同时只允许一个进程持有锁、一个 Run 正在运行。
+`resume` 不带 ID 时列出历史会话，按最近更新时间排序，并显示首条任务摘要。交互终端中，使用 `↑` / `↓` 移动高亮，`Enter` 恢复；`Home` / `End` 跳到首尾，`PageUp` / `PageDown` 翻页；`Esc` / `Ctrl+C` / `Ctrl+D` 退出选择器。空会话不进入选择列表，`sessions` 仍可查看它们。`resume --last` 跳过空会话及当前不可读取的日志。模型与权限使用本次启动配置，Mock 演示需加 `--mock`；也可用 `--config` 指定原配置。全局选项可写在子命令之前。
+
+在历史列表中按 `Delete` 或 `d`，确认区会显示选中会话的信息。只有 `y` / `Y` 确认删除，`Enter` / `n` / `Esc` 取消本次删除。删除成功后立即更新列表，仍可继续选择其他会话；删除失败会显示原因并保留列表项。删除包括该主会话和日志中关联的子会话记录，无法撤销，不会撤销项目文件修改。删除前检查全部相关日志与锁，当前打开或被其他进程占用的会话不能删除，日志损坏或关联不一致时拒绝删除。空锁文件保留以维持跨进程锁的有效性，不会出现在历史列表中。
+
+管道和重定向输入保留文本选择方式：输入序号或完整 ID 恢复，`d 序号` 或 `d SESSION_ID` 发起删除，再输入 `y` / `yes` 确认；空输入取消选择。
+
+打开会话后先恢复日志、显示已有用户与助手对话，再等待输入，不会自动启动模型。使用 `/continue` 明确续跑，或输入新任务保留完整历史上下文。聊天内也可用 `/resume` 切换；目标会话不存在、损坏或被占用时提示错误并保留当前会话。一个会话同时只允许一个进程持有锁、一个 Run 正在运行。
 
 预算默认每 Run 64 次模型请求、128 次工具受理、600 秒。参数错误与权限拒绝也消耗工具预算；总时间包含模型、工具和审批。续跑会显式创建新预算，历史各 Run 指标保留。`usage_missing` 区分供应商没有返回 usage 的请求，token 计数不伪造估算值。
 
@@ -164,7 +194,7 @@ uv run hiro-agent chat --resume SESSION_ID --workspace /path/to/your/project
 
 启动按 Session → Model → Permission → Tools → Context → 可选 Subagents → Agent 装配。插件初始化失败会撤销本插件注册并释放已登记资源；退出先停止 Agent，再逆序释放。普通 EventBus 监听器仅观察运行，不决定权限或持久化。
 
-会话存放于工作区的 `.hiro-agent/sessions/`，该目录应加入目标项目的 `.gitignore`。Hiro 自身仓库已忽略它；程序不会自动修改目标项目的 Git 配置。日志包含任务、模型输入、工具参数与输出，应按项目内容妥善保管；程序不会把模型鉴权头或 API Key 配置写进日志。
+会话自动存放于工作区的隐藏目录 `.hiro-agent/sessions/`，未指定 `--workspace` 时就是当前目录，退出后保留。该目录应加入目标项目的 `.gitignore`。Hiro 自身仓库已忽略 `.hiro-agent/`；程序不会自动修改目标项目的 Git 配置。日志包含任务、模型输入、工具参数与输出，应按项目内容妥善保管；程序不会把模型鉴权头或 API Key 配置写进日志。
 
 持久化顺序为：
 

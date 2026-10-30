@@ -17,6 +17,7 @@ from hiro_agent.contracts import (
     RunStatus,
     ToolCall,
     Usage,
+    usage_counts,
 )
 from hiro_agent.core import EventBus
 from hiro_agent.errors import BudgetExceeded, PersistenceError
@@ -91,7 +92,7 @@ def test_child_deadline_cannot_extend_root_and_elapsed_is_not_summed(monkeypatch
 async def test_scoped_run_tracks_local_and_total_usage_with_lineage(tmp_path):
     root = Budget(BudgetConfig())
     root.claim_model()
-    root.record(input_tokens=7, output_tokens=3, worker_steps=1)
+    root.record(**usage_counts(Usage(input_tokens=7, output_tokens=3, cached_input_tokens=3)))
     child = Budget(BudgetConfig(), parent=root)
     events = EventBus()
     observed = []
@@ -101,7 +102,7 @@ async def test_scoped_run_tracks_local_and_total_usage_with_lineage(tmp_path):
             ModelResponse(
                 assistant=AssistantMessage(text="child answer"),
                 finish_reason="stop",
-                usage=Usage(input_tokens=11, output_tokens=5),
+                usage=Usage(input_tokens=11, output_tokens=5, cached_input_tokens=6),
             )
         ]
     )
@@ -116,6 +117,11 @@ async def test_scoped_run_tracks_local_and_total_usage_with_lineage(tmp_path):
     assert root.metrics.input_tokens == 18
     assert root.metrics.output_tokens == 8
     assert root.metrics.worker_steps == 2
+    assert result.metrics.cached_input_tokens == 6
+    assert result.metrics.cache_reported_input_tokens == 11
+    assert root.metrics.cached_input_tokens == 9
+    assert root.metrics.cache_reported_input_tokens == 18
+    assert root.metrics.cache_usage_missing == 0
     for _, data in observed:
         assert data["session_id"] == "child-session"
         assert data["run_id"] == "child-run"
@@ -124,6 +130,10 @@ async def test_scoped_run_tracks_local_and_total_usage_with_lineage(tmp_path):
     started = next(event for event in agent.session.events if event.type == "run.started")
     assert started.data["parent_session_id"] == "root-session"
     assert agent.session.events[-1].data["output"] == "child answer"
+    finished = [data for name, data in observed if name == "model.finished"]
+    assert len(finished) == 1
+    assert finished[0]["usage"]["cached_input_tokens"] == 6
+    assert finished[0]["attempt_id"]
     await agent.close()
     assert not scope.cancellation.cancelled, "Closing a completed child must not cancel the root"
 

@@ -5,6 +5,7 @@
     "model": "",
     "api_key_env": "HIRO_API_KEY",
     "request_timeout_seconds": 120,
+    "stream": true,
     "extra_body": {}
   },
   "budget": {

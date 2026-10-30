@@ -10,7 +10,7 @@
 4. **Model Adapter**：统一模型接口 → Chat Completions 兼容服务 / 离线 Mock。
 5. **Agent Loop**：模型 → 工具 → 模型 → 最终回答。
 
-在这条主链路上，Hiro 还实现了运行预算、JSONL 会话恢复和可选的只读子 Agent。默认运行单 Agent，普通工具顺序执行，模型非流式调用；适合阅读源码、学习实现和扩展实验。
+在这条主链路上，Hiro 还实现了运行预算、JSONL 会话恢复和可选的只读子 Agent。默认运行单 Agent，普通工具顺序执行，真实模型默认流式返回；适合阅读源码、学习实现和扩展实验。
 
 完整配置与恢复细节见 [使用与运行机制](docs/guide.md)。
 
@@ -75,10 +75,13 @@ uv run hiro-agent chat --config configs/baseline.json --workspace /path/to/your/
 
 ## CLI
 
+交互终端使用独立的深色输入框，会话顶部显示模型、工作区与 Session。输入 `/` 后，命令及中文说明会显示在输入框上方，当前选项整行蓝色高亮。继续输入可筛选（如 `/co`），用 `↑` / `↓` 切换，按 `Enter` 执行；`Tab` 补全当前选项，`Esc` 收起菜单。也可以直接输入完整命令后回车。
+
 ```text
 /help
 /continue
 /tasks
+/resume
 /exit
 ```
 
@@ -88,25 +91,42 @@ uv run hiro-agent chat --config configs/baseline.json --workspace /path/to/your/
 | `/help`             | 显示帮助                        |
 | `/continue`         | 继续最近未完成的任务，使用新 Run 和新预算     |
 | `/tasks`            | 查看当前 Session 最近一个 Run 的委派任务 |
+| `/resume`           | 选择历史会话；也可用 `/resume SESSION_ID` 直接切换 |
 | `/exit` 或空闲时 Ctrl+D | 退出                          |
 | 空闲时 Ctrl+C          | 清空当前输入                      |
 | 执行或审批时 Ctrl+C       | 取消当前 Run，清理后返回输入提示          |
 
 修改文件和执行命令前会展示操作并请求批准。仅 `y` / `yes` 授权本次操作，回车、`n` 或 EOF 均表示拒绝。
 
+执行任务时，交互终端会逐步显示模型回复，并展示动态状态栏：当前阶段、耗时、输入/输出 Token、缓存命中数量与比例。用量包含只读子 Agent，在每次响应的最终 usage 返回后更新，任务结束后保留汇总。服务未返回用量或缓存字段时显示“未提供”，部分响应缺失时标明统计不完整。审批期间动画暂停，返回执行后恢复。
+
+模型回复支持 Markdown 渲染，包括标题、粗体、列表、表格、行内代码和带语法高亮的代码块。流式预览也会渲染 Markdown；超长回复在生成期间使用纯文本尾部预览，结束后渲染完整正文。管道和重定向输出保留原始 Markdown。
+
+真实模型默认使用 SSE 流式请求；不支持流式的服务可在 JSON 配置中设置 `model.stream: false`。工具调用收齐后才执行，断流或取消时不会执行未完成的工具调用。Mock 仍返回完整的脚本化演示结果。
+
 ## 会话与恢复
 
 Session 保存跨轮次的对话与事件；Run 是一次任务执行，拥有自己的状态和预算。同一个 Session 可以包含多个 Run。
 
-会话保存在工作区的 `.hiro-agent/sessions/`。查询与恢复：
+会话自动保存在工作区的隐藏目录 `.hiro-agent/sessions/`，退出后仍保留；未指定 `--workspace` 时使用当前目录。本仓库的 `.gitignore` 已忽略 `.hiro-agent/`。选择或恢复历史会话：
 
 ```bash
+uv run hiro-agent resume                         # 方向键选择历史会话，Enter 恢复
+uv run hiro-agent resume --last                  # 恢复最近有任务记录的可读取会话
+uv run hiro-agent resume SESSION_ID              # 直接恢复指定会话
+
+# 指定工作区，或继续使用原有 --resume 方式
+uv run hiro-agent resume --workspace /path/to/your/project
 uv run hiro-agent sessions --workspace /path/to/your/project
 uv run hiro-agent tasks --session SESSION_ID --workspace /path/to/your/project
 uv run hiro-agent chat --resume SESSION_ID --workspace /path/to/your/project
 ```
 
-恢复后等待用户输入；用 `/continue` 继续任务，或直接输入新任务并保留历史。`tasks` 查询整个会话的委派记录，可追加 `--run RUN_ID` 筛选。
+聊天中输入 `/resume` 也可选择历史会话，`/resume SESSION_ID` 直接切换，`/resume --last` 切换到最近的其他会话。列表显示更新时间与首条任务摘要，省略没有任务的空会话。交互终端使用 `↑` / `↓` 选择、`Enter` 恢复，`Esc` / `Ctrl+C` 取消；支持 `Home` / `End` 和 `PageUp` / `PageDown` 浏览较长列表。
+
+按 `Delete` 或 `d` 删除选中的历史会话，界面显示会话信息后，按 `y` 确认，`Enter` / `n` / `Esc` 取消删除。删除会移除此会话及关联子会话的历史记录，无法撤销；工作区中的项目文件保持原样。正在使用的会话不能删除。非交互输入仍可用序号或完整 ID 选择，`d 序号` 发起删除，确认时输入 `y` / `yes`，空输入取消。
+
+恢复后显示历史对话并等待用户输入；用 `/continue` 继续未完成任务，或直接输入新任务并保留完整上下文。恢复本身不会请求模型或重跑工具。继续使用原来的模型配置启动，例如 Mock 会话加 `--mock`，配置文件加 `--config`。`tasks` 查询整个会话的委派记录，可追加 `--run RUN_ID` 筛选。
 
 工具开始和结果事件落盘后才继续推进；恢复根据调用 ID 配对结果。旧工具调用不会自动重跑，结果未知的操作需要先核实。日志包含任务、工具参数及输出，在目标项目中应将 `.hiro-agent/` 加入 `.gitignore`。
 
@@ -206,7 +226,7 @@ uv run hiro-agent --mock --subagents --workspace /tmp/hiro-subagents-demo
 
 * 保留完整历史，尚无自动摘要或上下文裁剪。
 
-* 仅支持文本、非流式调用；网络请求不自动重试。
+* 仅支持文本，支持流式与完整响应；网络请求不自动重试。
 
 * 子 Agent 只读，共用工作区，无文件系统快照。
 
