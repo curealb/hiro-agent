@@ -2,12 +2,12 @@
 
 [返回项目首页](../README.md)
 
-一个 Python + uv 管理的、CLI 优先的 Coding Harness。主 Agent 可按需并行委派只读子 Agent，普通工具顺序执行、模型非流式调用；通过服务契约与插件生命周期拆分模型、执行、权限和会话。当前支持 Linux / Python 3.13。
+一个 Python + uv 管理的、CLI 优先的 Coding Harness。主 Agent 可按需并行委派只读子 Agent，普通工具顺序执行、模型非流式调用；通过服务契约与插件生命周期拆分模型、执行、权限和会话。当前支持 Linux / Python 3.12 及以上版本。
 
 ## 快速开始
 
 ```bash
-uv python install 3.13
+uv python install 3.12
 uv sync --locked --managed-python
 uv run hiro-agent --help
 ```

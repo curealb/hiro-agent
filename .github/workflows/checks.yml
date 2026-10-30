@@ -13,7 +13,7 @@ jobs:
         with:
           version: "0.9.15"
           enable-cache: true
-      - run: uv python install 3.13
+      - run: uv python install 3.12
       - run: uv sync --locked --managed-python
       - run: uv run --locked ruff check .
       - run: uv run --locked ruff format --check .

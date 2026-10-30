@@ -3,7 +3,7 @@ name = "hiro-agent"
 version = "0.1.0"
 description = "A small, recoverable, plugin-based coding agent harness"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28,<1",
     "pydantic>=2.10,<3",
@@ -27,7 +27,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
@@ -37,7 +37,7 @@ select = ["E", "F", "I", "UP", "B", "ASYNC"]
 ignore = ["ASYNC240", "ASYNC109"]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.12"
 files = ["src"]
 check_untyped_defs = true
 disallow_untyped_defs = true
