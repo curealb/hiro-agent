@@ -6,7 +6,7 @@ import asyncio
 import io
 import json
 import os
-from collections.abc import Coroutine
+from collections.abc import Callable, Coroutine
 from typing import Any, Literal
 
 from prompt_toolkit.application import Application
@@ -46,6 +46,7 @@ from hiro_agent.errors import ConfigurationError, HiroError
 from hiro_agent.kernel_contracts import InteractionRecord, InteractionReply, TaskRecord, TaskState
 from hiro_agent.presentation import assistant_markdown
 from hiro_agent.run_display import usage_summary
+from hiro_agent.terminal_font import FONT_HELP, TerminalFont
 from hiro_agent.terminal_ui import clip_text
 from hiro_agent.tui_backend import BotSummary, ChatEntry, Conversation, TuiBackend
 from hiro_agent.ui_commands import (
@@ -63,6 +64,7 @@ TUI_COMMANDS = {
     "/delete-agent": "删除当前 Agent 及其历史",
     "/init-agents": "补齐 Hiro、Agent 管理员、代码编写员",
     "/select": "选择文字：拖选后用终端快捷键复制，F4 返回",
+    "/font": "调整字号：/font 16、+、-、reset（macOS Terminal）",
     "/help": "显示命令帮助",
     "/exit": "退出界面（后台任务继续运行）",
 }
@@ -442,6 +444,10 @@ class BotTUI:
         self.exit_action: Literal["chat"] | None = None
         self.worker_online = False
         self.selection_mode = False
+        self.sidebar_width = 30
+        self._resizing_sidebar = False
+        self._terminal_font = TerminalFont()
+        self._changing_font = False
         self.notice = "/agent 切换 · /chat 聊天 · /help 帮助"
         self.dialog: Dialog | None = None
         self.answer: TextArea | None = None
@@ -531,10 +537,11 @@ class BotTUI:
                 self.composer,
             ]
         )
+        self._divider = Window(width=1, char="│", style="class:border")
         self._wide = VSplit(
             [
-                Box(self._sidebar, width=Dimension(min=24, preferred=30, max=34), padding=0),
-                Window(width=1, char="│", style="class:border"),
+                Box(self._sidebar, width=self._sidebar_width, padding=0),
+                self._divider,
                 self._body,
             ]
         )
@@ -578,6 +585,51 @@ class BotTUI:
             output=output,
         )
         self.app.before_render += self._synchronize_pane
+        self.app.after_render += self._resize_handlers
+
+    def _sidebar_width(self) -> int:
+        return max(24, min(self.sidebar_width, self.app.output.get_size().columns - 43))
+
+    def _resize_handlers(self, _: Application[None]) -> None:
+        """Capture a drag across panes, including before the next redraw."""
+        screen = self.app.renderer.last_rendered_screen
+        position = screen.visible_windows_to_write_positions.get(self._divider) if screen else None
+        if position is None or self.dialog is not None or self.selection_mode:
+            self._resizing_sidebar = False
+            return
+
+        def wrap(handler: Callable[[MouseEvent], Any]) -> Callable[[MouseEvent], Any]:
+            def dispatch(event: MouseEvent) -> Any:
+                on_divider = (
+                    event.position.x == position.xpos
+                    and position.ypos <= event.position.y < position.ypos + position.height
+                )
+                if self.dialog is not None or self.selection_mode:
+                    self._resizing_sidebar = False
+                    return handler(event)
+                if on_divider and event.event_type == MouseEventType.MOUSE_DOWN:
+                    if event.button == MouseButton.LEFT:
+                        self._resizing_sidebar = True
+                        return None
+                if self._resizing_sidebar:
+                    if event.event_type in {MouseEventType.MOUSE_MOVE, MouseEventType.MOUSE_UP}:
+                        self.sidebar_width = max(
+                            24, min(event.position.x, self.app.output.get_size().columns - 43)
+                        )
+                        if event.event_type == MouseEventType.MOUSE_UP:
+                            self._resizing_sidebar = False
+                        self.app.invalidate()
+                    return None
+                return handler(event)
+
+            return dispatch
+
+        handlers = self.app.renderer.mouse_handlers.mouse_handlers
+        size = self.app.output.get_size()
+        for y in range(size.rows):
+            row = handlers[y]
+            for x in range(size.columns):
+                row[x] = wrap(row[x])
 
     def _synchronize_pane(self, _: Application[None]) -> None:
         # Mouse focus can change in wide mode before a terminal resize. Keep the
@@ -661,7 +713,7 @@ class BotTUI:
         if self.selection_mode:
             return "  选择模式 · 拖选文字后使用终端复制快捷键 · F4 / Esc 返回"
         if self.composer.text.lstrip().startswith("/"):
-            return "  /agent ID 或名称 · /tui · /chat · /select · /help · Tab 补全"
+            return "  /agent ID 或名称 · /font 字号 · /select · /help · Tab 补全"
         name = self.selected_bot.name if self.selected_bot else "Agent"
         return f"  给 {_safe(name)} 发消息   Enter 发送 · Alt+Enter 换行 · / 命令"
 
@@ -777,6 +829,8 @@ class BotTUI:
                 online = await asyncio.to_thread(self.backend.worker_running)
                 if self.selection_mode:
                     return
+                if not online and self.notice == "worker 已连接 · 退出界面后仍继续运行":
+                    self.notice = "worker 已断开，请按 F6 重启；详情见 .hiro-agent/worker.log"
                 self.worker_online = online
             except (HiroError, OSError, ValueError) as exc:
                 if not self.selection_mode:
@@ -821,7 +875,7 @@ class BotTUI:
         argument = parts[1].strip() if len(parts) > 1 else ""
         if command not in TUI_COMMANDS:
             self.notice = "未知命令：" + _safe(parts[0]) + "；输入 /help 查看帮助"
-        elif command != "/agent" and argument:
+        elif command not in {"/agent", "/font"} and argument:
             self.notice = f"用法：{command}（不接受参数）；输入 /help 查看帮助"
         elif command in {"/chat", "/exit", "/clear", "/delete-agent", "/init-agents"} and (
             self._submitting or self._replying or self._managing_agents
@@ -849,7 +903,24 @@ class BotTUI:
                     self.notice = f"已切换 Agent：{_safe(name)}"
         else:
             self.composer.text = ""
-            if command == "/tui":
+            if command == "/font":
+                if not argument:
+                    close = Button("返回", handler=self.close_dialog)
+                    self._show_dialog(
+                        Dialog(
+                            title="字体大小",
+                            body=Label(FONT_HELP),
+                            buttons=[close],
+                            width=Dimension(min=28, preferred=72, max=84),
+                        ),
+                        close,
+                    )
+                elif self._changing_font:
+                    self.notice = "字号正在调整，请稍后重试"
+                else:
+                    self._changing_font = True
+                    self._spawn(self._change_font(argument))
+            elif command == "/tui":
                 self.notice = "当前已在全屏工作台"
             elif command == "/select":
                 self.toggle_selection_mode()
@@ -872,9 +943,11 @@ class BotTUI:
                         "/delete-agent       删除当前 Agent 及其历史\n"
                         "/init-agents        补齐三个默认 Agent（保留已有配置）\n"
                         "/select             选择文字（F4 / Esc 返回）\n"
+                        "/font 16 / + / - / reset  调整字号（macOS Terminal）\n"
                         "/help               显示帮助\n"
                         "/exit               退出界面\n\n"
                         "点击工具标题展开 / 收起，F5 切换所有工具结果。\n"
+                        "拖动左右面板之间的竖线，可调整侧栏宽度。\n"
                         "Tab / ↑↓ 补全，Enter 确认。后台任务继续运行。"
                     ),
                     buttons=[close],
@@ -886,6 +959,17 @@ class BotTUI:
                     self.exit_action = "chat"
                 self.app.exit()
         self.app.invalidate()
+
+    async def _change_font(self, argument: str) -> None:
+        try:
+            size = await asyncio.to_thread(self._terminal_font.change, argument)
+            self.notice = f"当前终端字号：{size}；/font reset 恢复"
+            self.app.renderer.reset()
+        except ConfigurationError as exc:
+            self.notice = _safe(str(exc))
+        finally:
+            self._changing_font = False
+            self.app.invalidate()
 
     def open_agent_cleanup(self, *, delete: bool = False) -> None:
         if self.dialog is not None or self.selection_mode or self._managing_agents:

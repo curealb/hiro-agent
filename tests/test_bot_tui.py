@@ -317,6 +317,65 @@ async def test_mouse_click_selects_the_agent_row(keyboard: Keyboard) -> None:
     assert keyboard.ui.details is None or keyboard.ui.details.bot_id == BETA
 
 
+async def test_sidebar_drag_crosses_panes_without_changing_agent_or_draft(
+    keyboard: Keyboard,
+) -> None:
+    await keyboard.start()
+    await keyboard.focus_composer()
+    await keyboard.send("unsent draft", lambda: keyboard.ui.composer.text == "unsent draft")
+    row = next(i for i, line in enumerate(keyboard.lines) if "Beta Agent" in line) + 1
+    # All events arrive before redraw, including release over the other pane.
+    await keyboard.send(
+        f"\x1b[<0;31;{row}M\x1b[<32;51;{row}M\x1b[<0;51;{row}m",
+        lambda: keyboard.ui._sidebar_width() == 50,
+    )
+    assert not keyboard.ui._resizing_sidebar
+    assert keyboard.ui.selected_bot_id == ALPHA
+    assert keyboard.ui.composer.text == "unsent draft"
+    assert keyboard.lines[row - 1][50] == "│"
+    await keyboard.send(
+        f"\x1b[<0;51;{row}M\x1b[<32;27;{row}M\x1b[<0;27;{row}m",
+        lambda: keyboard.ui._sidebar_width() == 26,
+    )
+    assert keyboard.ui.selected_bot_id == ALPHA
+    assert not keyboard.backend.submissions
+
+
+async def test_sidebar_drag_limits_and_terminal_resize(keyboard: Keyboard) -> None:
+    await keyboard.start()
+    await keyboard.send(
+        "\x1b[<0;31;5M\x1b[<32;110;5M\x1b[<0;110;5m",
+        lambda: keyboard.ui.sidebar_width == 67,
+    )
+    keyboard.output.columns = 80
+    await keyboard.rendered(keyboard.ui.app.invalidate, lambda: keyboard.ui._sidebar_width() == 37)
+    assert keyboard.ui.sidebar_width == 67
+    keyboard.output.columns = 110
+    await keyboard.rendered(keyboard.ui.app.invalidate, lambda: "│" in keyboard.lines[4])
+    await keyboard.send(
+        "\x1b[<0;68;5M\x1b[<32;1;5M\x1b[<0;1;5m",
+        lambda: keyboard.ui.sidebar_width == 24,
+    )
+    assert keyboard.ui.selected_bot_id == ALPHA
+
+
+async def test_font_slash_command_stays_local(keyboard: Keyboard, monkeypatch) -> None:
+    changes: list[str] = []
+
+    def change(argument: str) -> int:
+        changes.append(argument)
+        return 16
+
+    monkeypatch.setattr(keyboard.ui._terminal_font, "change", change)
+    await keyboard.start()
+    await keyboard.send("/font 16\r", lambda: "当前终端字号：16" in keyboard.ui.notice)
+    assert changes == ["16"]
+    assert not keyboard.backend.submissions
+    await keyboard.send("/font\r", lambda: keyboard.ui.dialog is not None)
+    assert "字体大小" in keyboard.screen
+    assert "/font reset" in keyboard.screen
+
+
 async def test_filter_reduces_sidebar_and_keyboard_selects_matching_bot(keyboard: Keyboard) -> None:
     await keyboard.start()
     keyboard.ui.app.layout.focus(keyboard.ui.search)
@@ -613,6 +672,17 @@ async def test_ctrl_c_clears_composer_and_quit_preserves_worker_and_tasks(
     assert not keyboard.backend.cancellations
     assert keyboard.backend.conversations[ALPHA].tasks[0].state == TaskState.RUNNING
     assert keyboard.backend.conversations[BETA].tasks[0].state == TaskState.RUNNING
+
+
+async def test_refresh_clears_connected_notice_when_worker_exits(keyboard: Keyboard) -> None:
+    await keyboard.ui.ensure_worker()
+    assert keyboard.ui.worker_online
+    assert "worker 已连接" in keyboard.ui.notice
+    keyboard.backend.worker.stopped = True
+    await keyboard.ui.refresh()
+    assert not keyboard.ui.worker_online
+    assert "worker 已断开" in keyboard.ui.notice
+    assert ".hiro-agent/worker.log" in keyboard.ui.notice
 
 
 async def test_narrow_sidebar_can_open_select_and_return_to_composer(keyboard: Keyboard) -> None:

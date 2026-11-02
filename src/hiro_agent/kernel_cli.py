@@ -141,7 +141,7 @@ def init_agents(
             if config or mock or not store.list()
             else None
         )
-        return initialize_agents(store, source)
+        return initialize_agents(store, source, workspace=workspace)
 
     _command(apply)
 

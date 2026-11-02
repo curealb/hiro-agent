@@ -8,7 +8,7 @@ from pathlib import Path
 from hiro_agent.agent import Agent
 from hiro_agent.agent_management import register_agent_tools
 from hiro_agent.bots import AuthorityProvider, BotStore
-from hiro_agent.config import Config
+from hiro_agent.config import Config, resolve_model_environment
 from hiro_agent.context import SYSTEM_PROMPT, IdentityPreprocessor, PassthroughContext
 from hiro_agent.contracts import (
     AgentService,
@@ -121,6 +121,10 @@ async def create_harness(
             )
 
     async def model_setup(ctx: PluginContext) -> None:
+        nonlocal config
+        # session_setup may have restored an older persisted config. Apply local
+        # connection settings after that restore, without rewriting the Bot.
+        config = resolve_model_environment(config, workspace=workspace)
         root_model = model or (
             MockModel() if config.model.adapter == "mock" else CompatibleModel(config.model)
         )

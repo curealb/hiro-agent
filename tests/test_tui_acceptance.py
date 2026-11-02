@@ -295,7 +295,7 @@ async def test_unread_activity_is_cleared_when_its_bot_is_selected(
     assert "new activity on background Bot" in terminal.screen
 
 
-@pytest.mark.skipif(sys.platform != "linux", reason="TUI supports Linux")
+@pytest.mark.skipif(sys.platform not in {"linux", "darwin"}, reason="TUI needs Linux or macOS")
 def test_real_worker_executes_new_task_after_tui_process_exits(tmp_path: Path) -> None:
     (tmp_path / "hiro-demo.txt").write_text("pre-existing read-only fixture\n")
     master, slave = pty.openpty()
@@ -319,10 +319,12 @@ def test_real_worker_executes_new_task_after_tui_process_exits(tmp_path: Path) -
         deadline = time.monotonic() + 10
         while time.monotonic() < deadline:
             assert process.poll() is None
+            process_table = subprocess.check_output(["ps", "-A", "-o", "pid=,ppid="], text=True)
             children = [
-                child
-                for task_directory in Path(f"/proc/{process.pid}/task").iterdir()
-                for child in (task_directory / "children").read_text().split()
+                pid
+                for row in process_table.splitlines()
+                for pid, parent_pid in [row.split()]
+                if int(parent_pid) == process.pid
             ]
             if children:
                 worker_pid = int(children[0])
@@ -335,6 +337,10 @@ def test_real_worker_executes_new_task_after_tui_process_exits(tmp_path: Path) -
         assert backend.worker_running()
         assert os.getsid(worker_pid) == worker_pid
         os.write(master, b"\x11")
+        deadline = time.monotonic() + 5
+        while process.poll() is None and time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                transcript.extend(os.read(master, 65536))
         assert process.wait(timeout=5) == 0
         assert backend.worker_running()
         task = backend.submit("demo-b", "work submitted after UI exited")

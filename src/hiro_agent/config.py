@@ -115,8 +115,13 @@ def load_environment(workspace: Path | None = None) -> None:
 
 def load_runtime_config(path: Path | None = None, *, workspace: Path | None = None) -> Config:
     """Resolve shell > workspace .env > launch-directory .env > JSON/defaults."""
+    return resolve_model_environment(load_config(path), workspace=workspace)
+
+
+def resolve_model_environment(config: Config, *, workspace: Path | None = None) -> Config:
+    """Apply local model defaults to a copy, including for saved Agent configs."""
     load_environment(workspace)
-    config = load_config(path)
+    config = config.model_copy(deep=True)
     if "HIRO_BASE_URL" in os.environ:
         config.model.base_url = os.environ["HIRO_BASE_URL"]
     if "HIRO_MODEL" in os.environ:

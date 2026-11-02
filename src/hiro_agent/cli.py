@@ -471,7 +471,7 @@ async def chat_loop(
                         None,
                     )
                     source = store.get(bound).config if bound is not None else config
-                    initialized = initialize_agents(store, source)
+                    initialized = initialize_agents(store, source, workspace=workspace)
                     console.print(
                         "初始化完成；已创建："
                         + ("、".join(initialized["created"]) or "无")
@@ -826,8 +826,8 @@ def launch(
     last: bool = False,
     start_worker: bool = True,
 ) -> None:
-    if sys.platform != "linux":
-        raise typer.BadParameter("此版本仅支持 Linux")
+    if sys.platform not in {"linux", "darwin"}:
+        raise typer.BadParameter("此版本仅支持 Linux 和 macOS")
     try:
         config = configured(config_path, workspace=workspace, mock=mock, subagents=subagents)
         asyncio.run(
@@ -922,8 +922,8 @@ def tui(
     """全屏工作台：左侧切换 Agent，右侧查看消息、提交任务和处理审批。"""
     from hiro_agent.bot_tui import BotTUI
 
-    if sys.platform != "linux":
-        raise typer.BadParameter("此版本仅支持 Linux")
+    if sys.platform not in {"linux", "darwin"}:
+        raise typer.BadParameter("此版本仅支持 Linux 和 macOS")
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         raise typer.BadParameter("TUI 需要交互式终端；管道输入请使用 chat 或 kernel 命令")
     workspace = inherited_option(ctx, "workspace", workspace)

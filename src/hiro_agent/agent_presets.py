@@ -1,13 +1,14 @@
 """Create the standard persistent Agents without replacing saved configuration."""
 
 from datetime import UTC, datetime
+from pathlib import Path
 
 from pydantic import ValidationError
 
 from hiro_agent.agent_communication import COMMUNICATION_TOOLS
 from hiro_agent.agent_management import manager_config
 from hiro_agent.bots import BotStore, permission_digest
-from hiro_agent.config import BotConfig, Config
+from hiro_agent.config import BotConfig, Config, resolve_model_environment
 from hiro_agent.errors import ConfigurationError
 
 DEFAULT_AGENT_IDS = ("default", "agent-manager", "code-writer")
@@ -35,7 +36,9 @@ def _standard_config(source: Config, bot_id: str, name: str, instructions: str =
     return Config.model_validate_json(config.model_dump_json())
 
 
-def initialize_agents(store: BotStore, source: Config | None = None) -> dict[str, list[str]]:
+def initialize_agents(
+    store: BotStore, source: Config | None = None, *, workspace: Path | None = None
+) -> dict[str, list[str]]:
     """Atomically create missing presets using one consistent saved-config snapshot."""
     with store.database.transaction() as connection:
         rows = {
@@ -55,6 +58,8 @@ def initialize_agents(store: BotStore, source: Config | None = None) -> dict[str
                 next(iter(rows)),
             )
             source = store._record_from_row(source_id, rows[source_id]).config
+        if workspace is not None:
+            source = resolve_model_environment(source or Config(), workspace=workspace)
         if source is None:
             raise ConfigurationError(
                 "初始化 Agent 需要模型配置：请使用 --config 指定配置文件，"
@@ -66,7 +71,8 @@ def initialize_agents(store: BotStore, source: Config | None = None) -> dict[str
             raise ConfigurationError("初始化 Agent 的源配置字段不合法，请检查 --config。") from None
         if source.model.adapter == "compatible" and not source.model.model.strip():
             raise ConfigurationError(
-                "初始化 Agent 需要模型名称：请在 --config 中填写 model.model，或设置 HIRO_MODEL。"
+                "初始化 Agent 需要模型名称：请在 .env 中设置 HIRO_MODEL，"
+                "或在 --config 中填写 model.model（也可导出 HIRO_MODEL）。"
             )
 
         default = _standard_config(source, "default", "Hiro")

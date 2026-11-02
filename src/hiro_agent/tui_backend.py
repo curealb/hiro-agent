@@ -17,7 +17,7 @@ from uuid import uuid4
 
 from hiro_agent.agent_presets import initialize_agents
 from hiro_agent.bot_lifecycle import clear_bot_history
-from hiro_agent.config import load_environment, load_runtime_config
+from hiro_agent.config import load_environment, resolve_model_environment
 from hiro_agent.contracts import AssistantMessage, SessionEvent, ToolCall, ToolResult
 from hiro_agent.errors import ConfigurationError, PersistenceError
 from hiro_agent.kernel_contracts import (
@@ -109,6 +109,7 @@ class TuiBackend:
         by_task = {task.id: task for task in tasks}
         summaries: list[BotSummary] = []
         for bot in self.kernel.bots.list():
+            model = resolve_model_environment(bot.config, workspace=self.workspace).model
             owned = [task for task in tasks if task.bot_id == bot.bot_id]
             latest = max(owned, key=lambda task: (task.updated_at, task.id), default=None)
             status = latest.state.value if latest is not None else "idle"
@@ -126,7 +127,7 @@ class TuiBackend:
                 BotSummary(
                     bot_id=bot.bot_id,
                     name=bot.config.bot.name,
-                    model=bot.config.model.model or bot.config.model.adapter,
+                    model=model.model or model.adapter,
                     status=status,
                     preview=_short(latest.output or latest.text) if latest is not None else "",
                     pending_count=sum(
@@ -322,10 +323,7 @@ class TuiBackend:
         return result
 
     def initialize_agents(self) -> dict[str, list[str]]:
-        source = None
-        if not self.kernel.bots.list():
-            source = load_runtime_config(workspace=self.workspace)
-        return initialize_agents(self.kernel.bots, source)
+        return initialize_agents(self.kernel.bots, workspace=self.workspace)
 
     def reply(self, bot_id: str, interaction_id: str, reply: InteractionReply) -> InteractionRecord:
         record = self.kernel.interactions.get(interaction_id, bot_id=bot_id)

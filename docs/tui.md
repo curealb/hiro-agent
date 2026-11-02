@@ -39,7 +39,7 @@ hiro-agent tui --demo -w /tmp/hiro-tui-demo
 
 `--demo`（亦可写 `--mock`）添加 `demo-a` 和 `demo-b` 两个脚本化演示 Agent，不覆盖已有同 ID 配置。它们演示读取 `hiro-demo.txt`、请求批准写入和验证，不理解任意编程任务。写入仍需批准；真实模型使用各 Bot 保存的完整配置和凭据环境变量。
 
-TUI 需要 stdin 和 stdout 都连接交互式 Linux 终端，支持鼠标点击与滚轮。不带子命令时，重定向或管道会继续使用传统聊天；`chat`、`resume` 和根命令的 `--resume SESSION_ID` 也继续进入传统聊天。
+TUI 需要 stdin 和 stdout 都连接交互式 Linux 或 macOS 终端，支持鼠标点击与滚轮。不带子命令时，重定向或管道会继续使用传统聊天；`chat`、`resume` 和根命令的 `--resume SESSION_ID` 也继续进入传统聊天。
 
 对话区使用连续的深紫底色，空行与行尾保持一致；消息之间留白，正文最长 100 列，工具和任务提示使用较淡的文字。终端通过 `COLORTERM=truecolor` / `24bit` 或 `TERM` 的 `-direct` / `-truecolor` 后缀声明真彩色支持时，界面会使用完整紫色配色；否则沿用终端色深。显式的 `PROMPT_TOOLKIT_COLOR_DEPTH` 和 `NO_COLOR` 设置优先。
 
@@ -57,6 +57,9 @@ TUI 需要 stdin 和 stdout 都连接交互式 Linux 终端，支持鼠标点击
 | F4 / `/select` | 进入文字选择模式，拖选后用终端快捷键复制；F4 / Esc 返回 |
 | 点击工具结果标题 / F5 | 展开或收起单项工具输出；F5 展开或收起当前 Agent 的所有工具结果 |
 | 点击左侧 Agent | 立即切换对话，保留当前未发送草稿 |
+| 拖动侧栏右侧竖线 | 调整侧栏宽度；当前界面内保留宽度，终端变窄时自动限制 |
+| `/font 16`、`/font +`、`/font -`、`/font reset` | 调整当前 macOS Terminal 标签页字号；reset 恢复本次首次调整前的字号 |
+| `/font` | 查看字号命令和其他终端的缩放方法 |
 | F2，↑/↓，Enter | 聚焦左侧列表、选择 Agent、回到输入框 |
 | Alt+↑ / Alt+↓ | 在列表中直接切换 Agent |
 | 点击搜索框输入 | 按名称、ID 或模型筛选；Tab/Shift+Tab 切换焦点 |
@@ -64,6 +67,10 @@ TUI 需要 stdin 和 stdout 都连接交互式 Linux 终端，支持鼠标点击
 | Alt+Enter / Ctrl+J | 在主输入框换行 |
 | PgUp / PgDn / 滚轮 | 浏览对话；Ctrl+End 回到最新消息并恢复跟随 |
 | F3 / 查看并处理 | 查看完整待批准工具与参数，或回答问题 |
+
+侧栏最小宽度为 24 列，拖动时为右侧保留至少 42 列。窄屏仍使用单面板切换；文字选择模式中关闭拖动。
+
+字号由终端应用控制。`/font` 自动调整目前支持本机 macOS 自带 Terminal（字号 8–48），按当前 TTY 定位标签页；首次使用可能需要允许 macOS 自动化控制。SSH、tmux、screen 和其他终端请使用终端自己的缩放快捷键：macOS 通常为 `⌘+` / `⌘-`。字号命令只操作显示，不提交 Agent 任务。
 | F6 | 连接或启动独立 worker |
 | F7 / 导入 Agent | 导入或更新 Bot JSON 配置 |
 | F8 | 多选或全选任务，批量取消；待核实任务需填写核实说明 |

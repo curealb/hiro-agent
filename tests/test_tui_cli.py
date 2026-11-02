@@ -42,7 +42,7 @@ def interfaces(monkeypatch: pytest.MonkeyPatch) -> list[BotTUI]:
         cli,
         "sys",
         SimpleNamespace(
-            platform="linux",
+            platform=sys.platform,
             stdin=SimpleNamespace(isatty=lambda: True),
             stdout=SimpleNamespace(isatty=lambda: True),
         ),
@@ -85,7 +85,7 @@ def test_noninteractive_tui_rejects_before_database_creation(
         cli,
         "sys",
         SimpleNamespace(
-            platform="linux",
+            platform=sys.platform,
             stdin=SimpleNamespace(isatty=lambda: stdin_tty),
             stdout=SimpleNamespace(isatty=lambda: stdout_tty),
         ),
@@ -239,7 +239,7 @@ def _saved_tasks(workspace: Path) -> list[dict]:
         return []
 
 
-@pytest.mark.skipif(sys.platform != "linux", reason="TUI currently supports Linux terminals")
+@pytest.mark.skipif(sys.platform not in {"linux", "darwin"}, reason="TUI needs Linux or macOS")
 def test_real_pty_cli_switches_bots_and_persists_owned_tasks(tmp_path: Path) -> None:
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 32, 120, 0, 0))
@@ -296,7 +296,8 @@ def test_real_pty_cli_switches_bots_and_persists_owned_tasks(tmp_path: Path) -> 
         os.write(master, b"\x1b\x1b[Bmessage for Agent B\r")
         wait_until(lambda: len(_saved_tasks(tmp_path)) == 2, "second durable task")
         os.write(master, b"\x11")
-        process.wait(timeout=5)
+        # Drain the final repaint too: macOS PTYs have a small output buffer.
+        wait_until(lambda: process.poll() is not None, "TUI shutdown")
         assert process.returncode == 0, transcript.decode(errors="replace")
     finally:
         if process is not None:

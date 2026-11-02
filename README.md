@@ -43,7 +43,7 @@ TUI 中的直接 Agent 通信使用 `send_message` / `read_message`，携带 `co
 
 ## 环境
 
-* Linux
+* Linux 或 macOS
 
 * Python `>= 3.12`
 

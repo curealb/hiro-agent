@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -131,7 +132,7 @@ def test_chat_roundtrip_after_tui_clear_starts_a_fresh_session(tmp_path: Path, m
         cli,
         "sys",
         SimpleNamespace(
-            platform="linux",
+            platform=sys.platform,
             stdin=SimpleNamespace(isatty=lambda: True),
             stdout=SimpleNamespace(isatty=lambda: True),
         ),

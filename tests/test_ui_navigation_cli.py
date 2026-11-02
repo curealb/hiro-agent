@@ -34,7 +34,7 @@ def terminal_streams(monkeypatch: pytest.MonkeyPatch, stdin: bool, stdout: bool)
         cli,
         "sys",
         SimpleNamespace(
-            platform="linux",
+            platform=sys.platform,
             stdin=SimpleNamespace(isatty=lambda: stdin),
             stdout=SimpleNamespace(isatty=lambda: stdout),
         ),
@@ -396,7 +396,7 @@ def test_legacy_readonly_chat_roundtrip_keeps_identity_when_default_already_exis
     assert_unlocked(tmp_path)
 
 
-@pytest.mark.skipif(sys.platform != "linux", reason="TUI supports Linux terminals")
+@pytest.mark.skipif(sys.platform not in {"linux", "darwin"}, reason="TUI needs Linux or macOS")
 def test_real_pty_root_chat_tui_roundtrip_exits_without_model_task(tmp_path: Path) -> None:
     uv = shutil.which("uv")
     if uv is None:
@@ -457,6 +457,7 @@ def test_real_pty_root_chat_tui_roundtrip_exits_without_model_task(tmp_path: Pat
         os.write(master, b"/tui\r")
         wait_until(lambda: "Enter 发送".encode() in transcript, "restored TUI composer")
         os.write(master, b"/exit\r")
+        wait_until(lambda: process.poll() is not None, "TUI shutdown")
         assert process.wait(timeout=5) == 0, transcript.decode(errors="replace")
     finally:
         if process is not None and process.poll() is None:
