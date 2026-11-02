@@ -22,7 +22,7 @@ from hiro_agent.kernel_contracts import (
     TaskStoreService,
     utc_now,
 )
-from hiro_agent.kernel_db import KernelDatabase
+from hiro_agent.kernel_db import KernelDatabase, maintenance_lock
 
 MAX_MEMORY_CHARS = 16_384
 SUMMARY_CHARS = 4_096
@@ -81,18 +81,19 @@ class MemoryStore:
         )
 
     def create(self, bot_id: str, content: str) -> MemoryRecord:
-        self.bots.get(bot_id)
-        now = utc_now()
-        record = MemoryRecord(
-            id=uuid4().hex,
-            bot_id=bot_id,
-            content=_content(content),
-            created_at=now,
-            updated_at=now,
-        )
-        with self.database.transaction() as connection:
-            self._insert(connection, record)
-        return record
+        with maintenance_lock(self.database.path.parent):
+            self.bots.get(bot_id)
+            now = utc_now()
+            record = MemoryRecord(
+                id=uuid4().hex,
+                bot_id=bot_id,
+                content=_content(content),
+                created_at=now,
+                updated_at=now,
+            )
+            with self.database.transaction() as connection:
+                self._insert(connection, record)
+            return record
 
     def get(self, bot_id: str, memory_id: str) -> MemoryRecord:
         self.bots.get(bot_id)
@@ -154,53 +155,55 @@ class MemoryStore:
 
     def remember_task(self, bot_id: str, task_id: str) -> MemoryRecord | None:
         """Consume a terminal task once; None means its summary was explicitly deleted."""
-        self.bots.get(bot_id)
-        task = self.tasks.get(task_id, bot_id=bot_id)
-        if task.state not in TERMINAL_TASK_STATES or task.active_run_id is not None:
-            raise ConfigurationError("只有已结算的终态任务可以生成记忆摘要")
-        runs = self.tasks.runs(task_id)
-        final_run_id = runs[-1].id if runs else None
-        if runs and (runs[-1].task_id != task.id or runs[-1].session_id != task.session_id):
-            raise ConfigurationError("任务与最终 Run 所属关系不一致")
-        key = (SUMMARY_CONSUMER, bot_id, task.id, final_run_id or NO_RUN_KEY)
-        now = utc_now()
-        with self.database.transaction() as connection:
-            previous = connection.execute(
-                "SELECT memory_id FROM memory_consumptions "
-                "WHERE consumer=? AND bot_id=? AND task_id=? AND final_run_id=?",
-                key,
-            ).fetchone()
-            if previous is not None:
-                row = connection.execute(
-                    "SELECT * FROM bot_memories WHERE id=? AND bot_id=?",
-                    (previous["memory_id"], bot_id),
+        with maintenance_lock(self.database.path.parent):
+            self.bots.get(bot_id)
+            task = self.tasks.get(task_id, bot_id=bot_id)
+            if task.state not in TERMINAL_TASK_STATES or task.active_run_id is not None:
+                raise ConfigurationError("只有已结算的终态任务可以生成记忆摘要")
+            runs = self.tasks.runs(task_id)
+            final_run_id = runs[-1].id if runs else None
+            if runs and (runs[-1].task_id != task.id or runs[-1].session_id != task.session_id):
+                raise ConfigurationError("任务与最终 Run 所属关系不一致")
+            key = (SUMMARY_CONSUMER, bot_id, task.id, final_run_id or NO_RUN_KEY)
+            now = utc_now()
+            with self.database.transaction() as connection:
+                previous = connection.execute(
+                    "SELECT memory_id FROM memory_consumptions "
+                    "WHERE consumer=? AND bot_id=? AND task_id=? AND final_run_id=?",
+                    key,
                 ).fetchone()
-                return MemoryRecord.model_validate(dict(row)) if row is not None else None
-            record = MemoryRecord(
-                id=uuid4().hex,
-                bot_id=bot_id,
-                content=task_summary(task),
-                kind="task_summary",
-                task_id=task.id,
-                final_run_id=final_run_id,
-                created_at=now,
-                updated_at=now,
-            )
-            self._insert(connection, record)
-            connection.execute(
-                "INSERT INTO memory_consumptions VALUES (?, ?, ?, ?, ?)", (*key, record.id)
-            )
-        return record
+                if previous is not None:
+                    row = connection.execute(
+                        "SELECT * FROM bot_memories WHERE id=? AND bot_id=?",
+                        (previous["memory_id"], bot_id),
+                    ).fetchone()
+                    return MemoryRecord.model_validate(dict(row)) if row is not None else None
+                record = MemoryRecord(
+                    id=uuid4().hex,
+                    bot_id=bot_id,
+                    content=task_summary(task),
+                    kind="task_summary",
+                    task_id=task.id,
+                    final_run_id=final_run_id,
+                    created_at=now,
+                    updated_at=now,
+                )
+                self._insert(connection, record)
+                connection.execute(
+                    "INSERT INTO memory_consumptions VALUES (?, ?, ?, ?, ?)", (*key, record.id)
+                )
+            return record
 
     def sync_terminal(self, bot_id: str) -> builtins.list[MemoryRecord]:
         """Replay durable terminal state on startup/poll, without an observer dependency."""
-        self.bots.get(bot_id)
-        records = []
-        for task in self.tasks.list(bot_id=bot_id, states=tuple(sorted(TERMINAL_TASK_STATES))):
-            record = self.remember_task(bot_id, task.id)
-            if record is not None:
-                records.append(record)
-        return records
+        with maintenance_lock(self.database.path.parent):
+            self.bots.get(bot_id)
+            records = []
+            for task in self.tasks.list(bot_id=bot_id, states=tuple(sorted(TERMINAL_TASK_STATES))):
+                record = self.remember_task(bot_id, task.id)
+                if record is not None:
+                    records.append(record)
+            return records
 
     def _owner(self, record: MemoryRecord, bot_id: str) -> None:
         if record.bot_id != bot_id:

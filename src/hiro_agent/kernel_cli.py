@@ -13,6 +13,10 @@ from typing import Annotated, Any, Literal
 import typer
 from pydantic import TypeAdapter, ValidationError
 
+from hiro_agent.agent_communication import enable_communication
+from hiro_agent.agent_management import agent_summary, manager_config
+from hiro_agent.agent_presets import initialize_agents
+from hiro_agent.bot_lifecycle import clear_bot_history
 from hiro_agent.config import BudgetConfig, load_config
 from hiro_agent.errors import ConfigurationError, HiroError
 from hiro_agent.kernel_contracts import InteractionReply, TaskSubmission
@@ -44,9 +48,98 @@ def bots(workspace: Workspace = Path(".")) -> None:
     _command(lambda: KernelRuntime(workspace).bots.list())
 
 
+@app.command("agent-manager")
+def agent_manager(
+    workspace: Workspace = Path("."),
+    source: str = "default",
+    bot_id: str = "agent-manager",
+    name: str = "Agent 管理员",
+) -> None:
+    """从已有 Bot 继承模型和权限，新增能创建永久 Agent 的管理角色。"""
+
+    def create() -> dict[str, object]:
+        runtime = KernelRuntime(workspace)
+        config = manager_config(runtime.bots.get(source).config, bot_id=bot_id, name=name)
+        return agent_summary(runtime.bots.save(config, expected_version=0))
+
+    _command(create)
+
+
 @app.command("bot")
 def bot(bot_id: str, workspace: Workspace = Path(".")) -> None:
     _command(lambda: KernelRuntime(workspace).bots.get(bot_id))
+
+
+@app.command("enable-communication")
+def communication(bot_id: str, workspace: Workspace = Path(".")) -> None:
+    """为已有 Agent 开启 list_agents/send_message/read_message，保留模型和其他配置。"""
+
+    def apply() -> dict[str, object]:
+        runtime = KernelRuntime(workspace)
+        enable_communication(runtime.bots, bot_id)
+        return agent_summary(runtime.bots.get(bot_id))
+
+    _command(apply)
+
+
+@app.command("clear-history")
+def clear_history(
+    bot_id: str,
+    workspace: Workspace = Path("."),
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="确认清空历史和记忆")] = False,
+) -> None:
+    """清空指定 Agent 的任务、会话和记忆，保留身份与配置。"""
+
+    def apply() -> dict:
+        if not yes:
+            typer.confirm(
+                f"清空 Agent {bot_id} 的全部任务、会话和记忆？无法撤销",
+                default=False,
+                abort=True,
+            )
+        return clear_bot_history(workspace, bot_id)
+
+    _command(apply)
+
+
+@app.command("bot-delete")
+def bot_delete(
+    bot_id: str,
+    workspace: Workspace = Path("."),
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="确认删除 Agent 及其历史")] = False,
+) -> None:
+    """删除指定 Agent、全部历史、记忆及其专属设置。"""
+
+    def apply() -> dict:
+        if not yes:
+            typer.confirm(
+                f"删除 Agent {bot_id} 及其全部历史和记忆？无法撤销",
+                default=False,
+                abort=True,
+            )
+        return clear_bot_history(workspace, bot_id, delete_bot=True)
+
+    _command(apply)
+
+
+@app.command("init-agents")
+def init_agents(
+    workspace: Workspace = Path("."),
+    config: Annotated[
+        Path | None, typer.Option("--config", "-c", help="新 Agent 的模型配置")
+    ] = None,
+    mock: Annotated[bool, typer.Option("--mock", help="以离线模型初始化")] = False,
+) -> None:
+    """补齐 Hiro、Agent 管理员、代码编写员；保留已有 Agent 的配置与历史。"""
+
+    def apply() -> dict[str, list[str]]:
+        from hiro_agent.cli import configured
+
+        store = KernelRuntime(workspace).bots
+        source = configured(config, mock=mock) if config or mock or not store.list() else None
+        return initialize_agents(store, source)
+
+    _command(apply)
 
 
 @app.command("submit")

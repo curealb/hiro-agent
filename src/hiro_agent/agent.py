@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from collections.abc import Awaitable, Callable
+from functools import partial
 from typing import Any
 
 from hiro_agent.budget import Budget
@@ -12,6 +14,7 @@ from hiro_agent.contracts import (
     Cancellation,
     ContextService,
     ModelRequest,
+    ModelResponse,
     ModelService,
     RunMetrics,
     RunResult,
@@ -94,6 +97,38 @@ class Agent:
             if tasks[-1].run_id != started[-1].run_id:
                 raise HiroError("最近的 Run 尚未记录任务，请重新输入任务")
         return await self._invoke(None)
+
+    async def _record_stream(
+        self,
+        start: Callable[[], Awaitable[ModelResponse]],
+        chunks: list[str],
+        attempt_id: str,
+        run_id: str,
+    ) -> ModelResponse:
+        """Batch display deltas for other processes; only the final message is context."""
+        pending = asyncio.ensure_future(start())
+
+        async def flush() -> None:
+            if chunks:
+                text = "".join(chunks)
+                chunks.clear()
+                await self.session.append(
+                    "assistant.delta", {"attempt_id": attempt_id, "text": text}, run_id
+                )
+
+        try:
+            while True:
+                done, _ = await asyncio.wait({pending}, timeout=0.1)
+                await flush()
+                if done:
+                    return pending.result()
+        finally:
+            # Settle the provider before flushing the final chunk, so no delta
+            # can arrive after its terminal message or interruption marker.
+            if not pending.done():
+                pending.cancel()
+            await asyncio.gather(pending, return_exceptions=True)
+            await flush()
 
     async def _invoke(self, task_text: str | None, scope: RunScope | None = None) -> RunResult:
         if self._active_task is not None:
@@ -215,19 +250,32 @@ class Agent:
                         run_id,
                     )
                     self._emit("model.requested", {"attempt_id": attempt_id})
+                    chunks: list[str] = []
 
-                    def on_delta(text: str, *, current_attempt: str = attempt_id) -> None:
+                    def on_delta(
+                        text: str,
+                        *,
+                        current_attempt: str = attempt_id,
+                        current_chunks: list[str] = chunks,
+                    ) -> None:
                         self._check(budget)
                         if text:
+                            if scope.persistent_task_id is not None:
+                                current_chunks.append(text)
                             self._emit(
                                 "assistant.delta", {"attempt_id": current_attempt, "text": text}
                             )
 
                     try:
-                        completion = (
-                            self.model.complete_stream(request, on_delta)
+                        start = (
+                            partial(self.model.complete_stream, request, on_delta)
                             if isinstance(self.model, StreamingModelService)
-                            else self.model.complete(request)
+                            else partial(self.model.complete, request)
+                        )
+                        completion = (
+                            self._record_stream(start, chunks, attempt_id, run_id)
+                            if scope.persistent_task_id is not None
+                            else start()
                         )
                         response = await cancellable(
                             completion, self._cancellation, budget.remaining

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from hiro_agent.agent import Agent
+from hiro_agent.agent_management import register_agent_tools
 from hiro_agent.bots import AuthorityProvider, BotStore
 from hiro_agent.config import Config
 from hiro_agent.context import SYSTEM_PROMPT, IdentityPreprocessor, PassthroughContext
@@ -164,6 +165,8 @@ async def create_harness(
             if role_config is not None:
                 excluded_env.append(role_config.api_key_env)
         registry = build_file_tools(workspace, config.tools, excluded_env=excluded_env)
+        if config.bot is not None:
+            register_agent_tools(registry, ctx.get("bot_store"), config.bot.id)
         if configure_tools is not None:
             configure_tools(registry)
         ctx.provide("tool_registry", registry)

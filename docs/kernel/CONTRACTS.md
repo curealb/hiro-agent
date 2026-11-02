@@ -166,7 +166,11 @@ KernelWorker 在 recover、tick 前后及持续服务轮询调用摘要对账；
 
 Routine 触发先持久接受 pending，再在事务外 submit，最后确认 Task ID 并推进计划；唯一 `(routine_id, scheduled_at)` 配合 Task 幂等键覆盖重启和竞争。固定间隔按 scheduled time 推进，有界补发全部积压。停用阻止新接受，不撤销已有 pending；pending 即使停用仍对账提交，已创建 Task 另行取消。恢复启用后补发停用期间积压；完成的一次性计划不能重新启用。
 
-详细 DTO、路径限制和崩溃窗口见 `handoffs/C1.md`、`handoffs/C2.md`、`handoffs/C3.md`；实际 CLI 见 `USAGE.md`。
+MemoryRecord 保存 `id/bot_id/content/kind/task_id/final_run_id/revision/created_at/updated_at`。正文最多 16384 个 Unicode 字符；任务摘要最多 4096 字符。记忆 CRUD 按 Bot 校验归属，revision 用于乐观并发控制；摘要与唯一消费凭证在同一事务保存，删除摘要保留凭证。
+
+SkillDocument 保存 `id/name/description/content/path/digest`，digest 为原文件字节 SHA-256。技能文件仅接受 `<id>.md` 或 `<id>/SKILL.md`，同 ID 多文件报错；ID 为 1–128 位 ASCII 字母数字、下划线或连字符且首字符为字母数字。读取限定在初始化的技能目录内，使用目录描述符、`O_NOFOLLOW` 和普通文件检查，拒绝符号链接及 FIFO；内容必须为 UTF-8，最多 1 MiB。文件编辑在下次读取生效，启用状态按 Bot 隔离。
+
+RoutineRecord 保存定义、当前 enabled、下次/上次计划时间和上次 Task ID；RoutineTrigger 保存 `routine_id/scheduled_at/submission/task_id`。`task_id=None` 表示持久接受后尚未确认提交，不能据此断定 Task 不存在。接受 pending、幂等提交 Task、确认 Task ID 并推进计划分别持久化，重启后对账 pending。实际 CLI 见[内核使用指南](USAGE.md)。
 
 ## D：持久交接与共享链预算
 

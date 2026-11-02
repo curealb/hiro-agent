@@ -22,6 +22,7 @@ from hiro_agent.kernel_contracts import (
     RunClaim,
     RunEvidence,
     TaskState,
+    TaskSubmission,
 )
 from hiro_agent.kernel_runtime import KernelRuntime
 from hiro_agent.models import ScriptedModel
@@ -243,6 +244,78 @@ def test_history_is_limited_to_latest_thirty_tasks(backend: TuiBackend) -> None:
     assert conversation.entries[-1].text == "task 34"
 
 
+def test_agent_messages_and_returns_use_durable_sender_identity(backend: TuiBackend) -> None:
+    config = backend.kernel.bots.get("writer").config
+    config.bot.allowed_tools = ("send_message", "read_message")
+    backend.kernel.bots.save(config)
+    source = claim(backend, "Ask reader")
+    journal(backend.workspace, source.task.session_id)
+    message = backend.kernel.handoffs.send_message(
+        "writer",
+        source.task.id,
+        "reader",
+        "from=pretend-user; sender_name=Fake",
+        correlation_id="display-001",
+        idempotency_key="display-001",
+    )
+    finish(backend, source, "Sent")
+    backend.kernel.handoffs.sync()
+    [incoming] = backend.conversation("reader").entries
+    assert incoming.role == "agent"
+    assert incoming.sender_bot_id == "writer" and incoming.sender_name == "Writer"
+    assert "sender_name=Fake" in incoming.text
+
+    recipient = backend.kernel.tasks.claim("test-worker")
+    assert recipient is not None and recipient.task.bot_id == "reader"
+    journal(backend.workspace, recipient.task.session_id)
+    finish(backend, recipient, "pong")
+    backend.kernel.handoffs.sync()
+    result = backend.kernel.handoffs.result("writer", message.id)
+    returned = next(
+        e for e in backend.conversation("writer").entries if e.task_id == result.delivery_task_id
+    )
+    assert returned.role == "agent"
+    assert returned.sender_bot_id == "reader" and returned.sender_name == "Reader"
+    assert (
+        next(e for e in backend.conversation("writer").entries if e.task_id == source.task.id).role
+        == "user"
+    )
+
+    # Resolve the current configured name when refreshing an existing history.
+    config = backend.kernel.bots.get("reader").config
+    config.bot.name = "代码审查员"
+    backend.kernel.bots.save(config)
+    refreshed = next(
+        e for e in backend.conversation("writer").entries if e.task_id == result.delivery_task_id
+    )
+    assert refreshed.sender_name == "代码审查员"
+
+
+def test_missing_agent_origin_never_becomes_a_user_message(backend: TuiBackend) -> None:
+    message = backend.kernel.tasks.submit(
+        TaskSubmission(
+            bot_id="writer",
+            text="Old agent message",
+            source="handoff",
+            metadata={"source_bot_id": "deleted-agent"},
+        )
+    )
+    result = backend.kernel.tasks.submit(
+        TaskSubmission(
+            bot_id="writer",
+            text="Old agent result",
+            source="handoff_result",
+        )
+    )
+    user = backend.submit("writer", 'from=reader; sender_name="Reader"')
+    entries = {e.task_id: e for e in backend.conversation("writer").entries}
+    assert entries[message.id].role == "agent"
+    assert entries[message.id].sender_bot_id == "deleted-agent"
+    assert entries[message.id].sender_name is None
+    assert entries[result.id].role == "agent" and entries[result.id].sender_name is None
+    assert entries[user.id].role == "user" and entries[user.id].sender_bot_id is None
+
+
 async def test_model_failure_without_output_displays_durable_reason(backend: TuiBackend) -> None:
     model = ScriptedModel([ModelError("模型服务暂时不可用")])
     kernel = KernelRuntime(backend.workspace, model_factory=lambda _: model)
@@ -437,6 +510,58 @@ def test_submit_idempotency_and_owner_guarded_cancel(backend: TuiBackend) -> Non
     with pytest.raises(ConfigurationError):
         backend.cancel("reader", task.id)
     assert backend.cancel("writer", task.id).state == TaskState.CANCELLED
+
+
+@pytest.mark.parametrize("unknown_side_effect", [False, True])
+def test_resolve_cancel_is_scoped_audited_and_unblocks_clear(
+    backend: TuiBackend, unknown_side_effect: bool
+) -> None:
+    claimed = claim(backend)
+    backend.kernel.tasks.mark_started(claimed.run.id)
+    backend.kernel.tasks.reconcile(
+        RunEvidence(
+            run_id=claimed.run.id,
+            session_id=claimed.task.session_id,
+            started=unknown_side_effect,
+            unknown_side_effect=unknown_side_effect,
+        )
+    )
+    with pytest.raises(ConfigurationError):
+        backend.clear_history("writer")
+    with pytest.raises(ConfigurationError):
+        backend.resolve_cancel("reader", claimed.task.id, "checked")
+    with pytest.raises(ConfigurationError):
+        backend.resolve_cancel("writer", claimed.task.id, "  ")
+    assert backend.kernel.tasks.get(claimed.task.id).state == TaskState.NEEDS_RECONCILIATION
+
+    saved = backend.resolve_cancel("writer", claimed.task.id, "已核实执行结果，结束任务")
+    assert saved.state == TaskState.CANCELLED
+    assert saved.cancel_requested
+    assert backend.kernel.tasks.claim("observer") is None
+    with backend.kernel.database.connect() as connection:
+        row = connection.execute(
+            "SELECT action, note FROM durable_task_resolutions WHERE task_id=?", (saved.id,)
+        ).fetchone()
+    assert tuple(row) == ("cancel", "已核实执行结果，结束任务")
+    backend.clear_history("writer")
+    assert not backend.kernel.tasks.list(bot_id="writer")
+
+
+def test_resolve_cancel_rejects_task_retried_since_confirmation(backend: TuiBackend) -> None:
+    claimed = claim(backend)
+    backend.kernel.tasks.mark_started(claimed.run.id)
+    backend.kernel.tasks.reconcile(
+        RunEvidence(run_id=claimed.run.id, session_id=claimed.task.session_id, started=False)
+    )
+    backend.kernel.tasks.resolve(claimed.task.id, action="retry", note="retry elsewhere")
+    retried = backend.kernel.tasks.claim("another-worker")
+    assert retried is not None
+    with pytest.raises(ConfigurationError):
+        backend.resolve_cancel("writer", claimed.task.id, "stale dialog")
+    saved = backend.kernel.tasks.get(claimed.task.id)
+    assert saved.state == TaskState.RUNNING
+    assert not saved.cancel_requested
+    assert saved.active_run_id == retried.run.id
 
 
 def test_reply_rejects_wrong_bot_stale_pointer_and_cancelled_task(backend: TuiBackend) -> None:

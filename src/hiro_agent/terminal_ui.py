@@ -23,6 +23,8 @@ from prompt_toolkit.layout.menus import CompletionsMenu, MultiColumnCompletionsM
 from prompt_toolkit.styles import Style
 from prompt_toolkit.utils import get_cwidth
 
+from hiro_agent.ui_commands import AgentTargetCompletion
+
 TERMINAL_STYLE = Style.from_dict(
     {
         "menu": "bg:#171a1e #b8c2cf",
@@ -68,12 +70,14 @@ class CommandMenuControl(UIControl):
         state = self.interface.session.default_buffer.complete_state
         completions = state.completions if state else []
         lines: list[StyleAndTextTuples] = []
-        command_width = max((get_cwidth(item.text) for item in completions), default=0) + 2
+        command_width = max((get_cwidth(item.display_text) for item in completions), default=0) + 2
         for index, completion in enumerate(completions):
             selected = index == self.interface.selected_index
             command_style = "class:menu.selected" if selected else "class:menu.command"
             description_style = "class:menu.selected" if selected else "class:menu.description"
-            command = (" › " if selected else "   ") + completion.text.ljust(command_width)
+            label = completion.display_text
+            command = (" › " if selected else "   ") + label
+            command += " " * max(0, command_width - get_cwidth(label))
             command = clip_text(command, width)
             description = clip_text(completion.display_meta_text, width - get_cwidth(command))
             padding = " " * (width - get_cwidth(command) - get_cwidth(description))
@@ -182,7 +186,11 @@ class TerminalInterface:
 
         @bindings.add("enter", filter=in_menu)
         def execute_command(event: KeyPressEvent) -> None:
+            state = event.current_buffer.complete_state
+            target = state.completions[self.selected_index] if state and state.completions else None
             self._apply_selection()
+            if isinstance(target, AgentTargetCompletion):
+                return
             event.current_buffer.validate_and_handle()
 
         @bindings.add("escape", filter=in_menu)

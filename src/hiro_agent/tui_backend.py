@@ -12,7 +12,12 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
+from uuid import uuid4
 
+from hiro_agent.agent_presets import initialize_agents
+from hiro_agent.bot_lifecycle import clear_bot_history
+from hiro_agent.config import Config
 from hiro_agent.contracts import AssistantMessage, SessionEvent, ToolCall, ToolResult
 from hiro_agent.errors import ConfigurationError, PersistenceError
 from hiro_agent.kernel_contracts import (
@@ -25,6 +30,7 @@ from hiro_agent.kernel_contracts import (
 )
 from hiro_agent.kernel_runtime import KernelRuntime
 from hiro_agent.session import read_session_snapshot
+from hiro_agent.ui_commands import addressed_agent
 
 
 @dataclass(frozen=True)
@@ -43,6 +49,10 @@ class ChatEntry:
     role: str
     text: str
     task_id: str
+    entry_id: str = ""
+    preview: Literal["streaming", "interrupted"] | None = None
+    sender_bot_id: str | None = None
+    sender_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -169,8 +179,13 @@ class TuiBackend:
         pending = tuple(record for record in interactions if _live_interaction(record, by_task))
         entries: list[ChatEntry] = []
         errors: list[str] = []
+        names = {
+            record.bot_id: record.config.bot.name
+            for record in self.kernel.bots.list()
+            if record.config.bot is not None
+        }
         for task in tasks:
-            entries.append(ChatEntry("user", task.text, task.id))
+            entries.append(self._task_input(task, names))
             events: tuple[SessionEvent, ...] = ()
             # A task without any Run has no journal yet, including cancelled queues.
             if self.kernel.tasks.runs(task.id):
@@ -200,12 +215,120 @@ class TuiBackend:
                 entries.append(ChatEntry("system", status, task.id))
         return Conversation(bot_id, tuple(entries), tasks, pending, "\n".join(errors) or None)
 
+    def _task_input(self, task: TaskRecord, names: dict[str, str]) -> ChatEntry:
+        if task.source not in {"handoff", "handoff_result"}:
+            original = task.metadata.get("addressed_input")
+            text = original if isinstance(original, str) else task.text
+            return ChatEntry("user", text, task.id)
+        sender_id = None
+        # Message tasks point to their sender's Task; result tasks point to the
+        # responding Bot's Task. Display identity comes from this durable link,
+        # never a name or "from=" field in model-controlled message text.
+        if task.parent_task_id is not None:
+            try:
+                sender_id = self.kernel.tasks.get(task.parent_task_id).bot_id
+            except ConfigurationError:
+                pass  # The originating Bot's history may have been cleared.
+        if sender_id is None and task.source == "handoff":
+            saved_id = task.metadata.get("source_bot_id")
+            if isinstance(saved_id, str) and saved_id:
+                sender_id = saved_id
+        return ChatEntry(
+            "agent",
+            task.text,
+            task.id,
+            sender_bot_id=sender_id,
+            sender_name=names.get(sender_id) if sender_id is not None else None,
+        )
+
     def submit(self, bot_id: str, text: str, *, idempotency_key: str | None = None) -> TaskRecord:
         if not text.strip():
             raise ConfigurationError("任务内容不能为空")
+        metadata: dict[str, object] = {}
+        if text.lstrip().startswith("/"):
+            address = addressed_agent(
+                text,
+                (
+                    (record.bot_id, record.config.bot.name)
+                    for record in self.kernel.bots.list()
+                    if record.config.bot is not None
+                ),
+                (),
+            )
+            assert address is not None
+            if not self.kernel.bots.authority(bot_id).allows("send_message"):
+                raise ConfigurationError("当前 Agent 没有 send_message 权限，无法发起通信")
+            # Stable across a repeated submit from the same client request.
+            correlation_id = "comm-" + uuid4().hex
+            if idempotency_key is not None:
+                import hashlib
+
+                correlation_id = (
+                    "comm-"
+                    + hashlib.sha256((bot_id + ":" + idempotency_key).encode()).hexdigest()[:24]
+                )
+            metadata = {
+                "addressed_input": text,
+                "target_agent_ids": [target.bot_id for target in address.targets],
+                "correlation_id": correlation_id,
+            }
+            if len(address.targets) == 1:
+                metadata["target_agent_id"] = address.targets[0].bot_id
+            requests = [
+                {
+                    "target_agent_id": target.bot_id,
+                    "name": target.name,
+                    "correlation_id": (
+                        correlation_id if len(address.targets) == 1 else f"{correlation_id}-{i + 1}"
+                    ),
+                }
+                for i, target in enumerate(address.targets)
+            ]
+            metadata["target_correlations"] = {
+                str(request["target_agent_id"]): str(request["correlation_id"])
+                for request in requests
+            }
+            text = (
+                "用户指定本次通信对象（必须逐一联系，不能只选择其中一个）：\n"
+                + json.dumps(requests, ensure_ascii=False)
+                + "\n"
+                f"本次通信/测试标识已自动生成：{correlation_id}。"
+                "用户已经确认目标及发起通信，不需要再要求用户提供唯一标识或重复确认。\n"
+                "分别使用真实 send_message 接口联系每个目标，"
+                "每条消息的 correlation_id 使用该目标对应的上述标识，"
+                "idempotency_key 同样使用该目标标识；根据用户要求分工，"
+                "根据用户内容和双方协议组织 payload。若是 ping/pong 测试，"
+                "协议中的 id/test_id 也使用该目标标识。全部发送后结束本阶段，"
+                "由系统回传后使用 read_message 分别核验真实回复并汇总。"
+                "部分回复时明确标注其他目标尚未完成；"
+                "只有所有目标均有匹配回复才能报告全部完成，失败与未发送的目标也须列出。\n"
+                f"用户的消息内容：\n{address.text}"
+            )
         return self.kernel.tasks.submit(
-            TaskSubmission(bot_id=bot_id, text=text, idempotency_key=idempotency_key)
+            TaskSubmission(
+                bot_id=bot_id, text=text, idempotency_key=idempotency_key, metadata=metadata
+            )
         )
+
+    def clear_history(self, bot_id: str) -> dict:
+        result = clear_bot_history(self.workspace, bot_id)
+        self._snapshots.clear()
+        return result
+
+    def delete_bot(self, bot_id: str) -> dict:
+        result = clear_bot_history(self.workspace, bot_id, delete_bot=True)
+        self._snapshots.clear()
+        return result
+
+    def initialize_agents(self) -> dict[str, list[str]]:
+        source = None
+        if not self.kernel.bots.list():
+            source = Config()
+            if "HIRO_MODEL" in os.environ:
+                source.model.model = os.environ["HIRO_MODEL"]
+            if "HIRO_BASE_URL" in os.environ:
+                source.model.base_url = os.environ["HIRO_BASE_URL"]
+        return initialize_agents(self.kernel.bots, source)
 
     def reply(self, bot_id: str, interaction_id: str, reply: InteractionReply) -> InteractionRecord:
         record = self.kernel.interactions.get(interaction_id, bot_id=bot_id)
@@ -230,6 +353,12 @@ class TuiBackend:
         task = self.kernel.tasks.cancel(task_id, bot_id=bot_id)
         if task.state == TaskState.CANCELLED:
             self.kernel.interactions.cancel_for_task(task.id)
+        return task
+
+    def resolve_cancel(self, bot_id: str, task_id: str, note: str) -> TaskRecord:
+        self.kernel.tasks.get(task_id, bot_id=bot_id)
+        task = self.kernel.tasks.resolve(task_id, action="cancel", note=note)
+        self.kernel.interactions.cancel_for_task(task.id)
         return task
 
     def worker_running(self) -> bool:
@@ -299,17 +428,30 @@ def _task_entries(
     calls: dict[str, ToolCall] = {}
     shown_calls: set[str] = set()
     interaction_ids = {record.id for record in interactions}
+    previews: dict[str, tuple[SessionEvent, list[str]]] = {}
+    ended_attempts: set[str] = set()
+    ended_runs: set[str | None] = set()
 
-    def append(timestamp: datetime, role: str, text: str) -> None:
+    def append(timestamp: datetime, role: str, text: str, *, entry_id: str = "") -> None:
         if text.strip():
-            timeline.append((timestamp, len(timeline), ChatEntry(role, text, task.id)))
+            timeline.append((timestamp, len(timeline), ChatEntry(role, text, task.id, entry_id)))
 
     for event in events:
         if event.type == "assistant.message":
+            previews.pop(event.data.get("attempt_id", ""), None)
             message = AssistantMessage.model_validate(event.data["message"])
             calls.update((call.id, call) for call in message.tool_calls)
             if not event.data.get("prepared_operation"):
                 append(event.timestamp, "assistant", message.text or "")
+        elif event.type == "assistant.delta":
+            attempt_id = event.data["attempt_id"]
+            if attempt_id not in previews:
+                previews[attempt_id] = (event, [])
+            previews[attempt_id][1].append(event.data["text"])
+        elif event.type in {"model.interrupted", "model.failed"}:
+            ended_attempts.add(event.data["attempt_id"])
+        elif event.type == "run.ended":
+            ended_runs.add(event.run_id)
         elif event.type in {"tool.called", "tool.started"}:
             call = ToolCall.model_validate(event.data["call"])
             if call.id not in shown_calls and call.name != "ask_user":
@@ -329,7 +471,12 @@ def _task_entries(
                 if value is not None
                 else ""
             )
-            append(event.timestamp, "tool", f"{name} · {status}\n{detail[:2000]}".rstrip())
+            append(
+                event.timestamp,
+                "tool",
+                f"{name} · {status}\n{detail}".rstrip(),
+                entry_id=f"{task.id}:{event.session_id}:{event.seq}",
+            )
         elif event.type == "interaction.answer":
             # DB answers appear as soon as saved, before a worker resumes. A
             # journal answer is the fallback if its interaction row is missing.
@@ -337,6 +484,25 @@ def _task_entries(
                 text = event.data.get("text")
                 if isinstance(text, str):
                     append(event.timestamp, "user", text)
+    for attempt_id, (first, chunks) in previews.items():
+        text = "".join(chunks)
+        if not text.strip():
+            continue
+        live = (
+            task.state == TaskState.RUNNING
+            and first.run_id == task.active_run_id
+            and first.run_id not in ended_runs
+            and attempt_id not in ended_attempts
+        )
+        timeline.append(
+            (
+                first.timestamp,
+                len(timeline),
+                ChatEntry(
+                    "assistant", text, task.id, preview="streaming" if live else "interrupted"
+                ),
+            )
+        )
     for record in interactions:
         if record.request.kind == "question":
             append(record.created_at, "assistant", record.request.prompt)

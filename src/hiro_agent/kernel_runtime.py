@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import fcntl
+import os
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal
@@ -10,6 +12,7 @@ from uuid import uuid4
 
 from pydantic import Field, ValidationError
 
+from hiro_agent.agent_communication import register_communication_tools
 from hiro_agent.bootstrap import Harness, create_harness
 from hiro_agent.bots import BotStore
 from hiro_agent.budget import Budget
@@ -49,7 +52,7 @@ from hiro_agent.kernel_contracts import (
     TaskState,
     canonical_arguments,
 )
-from hiro_agent.kernel_db import KernelDatabase
+from hiro_agent.kernel_db import KernelDatabase, maintenance_lock
 from hiro_agent.memory import MemoryStore
 from hiro_agent.routines import RoutineStore
 from hiro_agent.session import JsonlSession, recover_session
@@ -236,6 +239,7 @@ class KernelRunner:
 
             def configure_tools(registry: ToolRegistry) -> None:
                 self._configure_tools(registry)
+                register_communication_tools(registry, self.handoffs, task.bot_id, task.id)
                 registry.register(
                     "read_skill",
                     "Read the full text of a Skill enabled for this Bot by its skill_id.",
@@ -498,7 +502,22 @@ class KernelWorker(TaskWorker):
     def __init__(self, kernel: KernelRuntime, *, poll_interval: float = 1.0) -> None:
         self.kernel = kernel
         self._scheduler: asyncio.Task[None] | None = None
+        self._maintenance_worker_fd: int | None = None
         super().__init__(kernel.database, kernel.tasks, kernel.runner, poll_interval=poll_interval)
+        try:
+            self._maintenance_worker_fd = os.open(
+                self.database.path.parent / "maintenance-worker.lock",
+                os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW,
+                0o600,
+            )
+            fcntl.flock(self._maintenance_worker_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BaseException:
+            if self._maintenance_worker_fd is not None:
+                os.close(self._maintenance_worker_fd)
+            assert self._lock_fd is not None
+            os.close(self._lock_fd)
+            self._lock_fd = None
+            raise
 
     def _summaries(self) -> None:
         self.kernel.handoffs.sync()
@@ -519,28 +538,30 @@ class KernelWorker(TaskWorker):
                 self.kernel.interactions.cancel_for_task(task.id)
 
     async def recover(self) -> list[TaskRecord]:
-        try:
-            recovered = await super().recover()
-            self._interactions()
-            self._summaries()
-            return recovered
-        except BaseException:
-            await self.close()
-            raise
+        with maintenance_lock(self.database.path.parent):
+            try:
+                recovered = await super().recover()
+                self._interactions()
+                self._summaries()
+                return recovered
+            except BaseException:
+                await self.close()
+                raise
 
     async def tick(self) -> bool:
-        try:
-            self._ensure_open()
-            self.kernel.routines.tick()
-            self._interactions()
-            self._summaries()
-            result = await super().tick()
-            self._interactions()
-            self._summaries()
-            return result
-        except BaseException:
-            await self.close()
-            raise
+        with maintenance_lock(self.database.path.parent):
+            try:
+                self._ensure_open()
+                self.kernel.routines.tick()
+                self._interactions()
+                self._summaries()
+                result = await super().tick()
+                self._interactions()
+                self._summaries()
+                return result
+            except BaseException:
+                await self.close()
+                raise
 
     async def serve(self, stop: asyncio.Event) -> None:
         self._ensure_open()
@@ -550,8 +571,9 @@ class KernelWorker(TaskWorker):
         async def schedule() -> None:
             try:
                 while not stop.is_set():
-                    self.kernel.routines.tick()
-                    self._summaries()
+                    with maintenance_lock(self.database.path.parent):
+                        self.kernel.routines.tick()
+                        self._summaries()
                     try:
                         await asyncio.wait_for(stop.wait(), timeout=self.poll_interval)
                     except TimeoutError:
@@ -569,26 +591,32 @@ class KernelWorker(TaskWorker):
             await self.close()
 
     async def _shutdown(self) -> None:
-        # TaskWorker.close shields this entire shutdown from repeated caller
-        # cancellation, keeping flock until both scheduler and runner are gone.
-        if self._stop is not None:
-            self._stop.set()
-        errors: list[BaseException] = []
-        if self._scheduler is not None:
-            self._scheduler.cancel()
-            outcomes = await asyncio.gather(self._scheduler, return_exceptions=True)
-            if isinstance(outcomes[0], BaseException) and not isinstance(
-                outcomes[0], asyncio.CancelledError
-            ):
-                errors.append(outcomes[0])
-        try:
-            await super()._shutdown()
-        except BaseException as error:
-            errors.append(error)
-        if len(errors) == 1:
-            raise errors[0]
-        if errors:
-            raise BaseExceptionGroup("Kernel worker shutdown failed", errors)
+        with maintenance_lock(self.database.path.parent, allow_pending=True):
+            try:
+                # TaskWorker.close shields this entire shutdown from repeated caller
+                # cancellation, keeping flock until both scheduler and runner are gone.
+                if self._stop is not None:
+                    self._stop.set()
+                errors: list[BaseException] = []
+                if self._scheduler is not None:
+                    self._scheduler.cancel()
+                    outcomes = await asyncio.gather(self._scheduler, return_exceptions=True)
+                    if isinstance(outcomes[0], BaseException) and not isinstance(
+                        outcomes[0], asyncio.CancelledError
+                    ):
+                        errors.append(outcomes[0])
+                try:
+                    await super()._shutdown()
+                except BaseException as error:
+                    errors.append(error)
+                if len(errors) == 1:
+                    raise errors[0]
+                if errors:
+                    raise BaseExceptionGroup("Kernel worker shutdown failed", errors)
+            finally:
+                if self._maintenance_worker_fd is not None:
+                    os.close(self._maintenance_worker_fd)
+                    self._maintenance_worker_fd = None
 
 
 class KernelRuntime:

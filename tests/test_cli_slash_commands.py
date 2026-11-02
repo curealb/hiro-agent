@@ -188,11 +188,36 @@ async def test_agent_name_prefix_completes_id_without_submitting(keyboard: Keybo
     await keyboard.send("/agent Beta", lambda: keyboard.choices == ["beta"])
     state = keyboard.prompt.default_buffer.complete_state
     assert state is not None
-    assert state.completions[0].display_meta_text == "Beta Agent"
+    assert state.completions[0].display_text == "Beta Agent"
+    assert state.completions[0].display_meta_text == "beta"
     await keyboard.send("\t", lambda: keyboard.prompt.default_buffer.text == "/agent beta")
     assert not task.done()
     keyboard.pipe.send_text("\r")
     assert await asyncio.wait_for(task, 2) == "/agent beta"
+
+
+async def test_slash_menu_shows_agent_names_and_uses_id_internally(keyboard: Keyboard) -> None:
+    keyboard.terminal.agent_choices = [("alpha", "代码编写员"), ("beta", "通信测试发送方")]
+    task = await keyboard.start()
+    await keyboard.send("/", lambda: len(keyboard.choices) == 10)
+    assert keyboard.choices[:2] == ["/alpha ", "/beta "]
+    assert any("通信测试发送方" in line for line in keyboard.screen_lines)
+    await keyboard.send("发送", lambda: keyboard.choices == ["/beta "])
+    assert any("通信测试发送方" in line for line in keyboard.screen_lines)
+    await keyboard.send("\r", lambda: keyboard.prompt.default_buffer.text == "/beta ")
+    assert not task.done()
+    keyboard.pipe.send_text("重新测试一下\r")
+    assert await asyncio.wait_for(task, 2) == "/beta 重新测试一下"
+
+
+async def test_traditional_menu_completes_second_target_and_keeps_first(keyboard: Keyboard) -> None:
+    keyboard.terminal.agent_choices = [("alpha", "代码编写员"), ("beta", "代码审查员")]
+    task = await keyboard.start()
+    await keyboard.send("/alpha /审查", lambda: keyboard.choices == ["/beta "])
+    await keyboard.send("\r", lambda: keyboard.prompt.default_buffer.text == "/alpha /beta ")
+    assert not task.done()
+    keyboard.pipe.send_text("一起检查\r")
+    assert await asyncio.wait_for(task, 2) == "/alpha /beta 一起检查"
 
 
 async def test_escape_dismisses_menu_and_further_typing_reopens_it(keyboard: Keyboard) -> None:

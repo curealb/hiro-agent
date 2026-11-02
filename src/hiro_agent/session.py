@@ -32,6 +32,7 @@ from hiro_agent.contracts import (
     usage_counts,
 )
 from hiro_agent.errors import PersistenceError
+from hiro_agent.kernel_db import maintenance_lock
 
 _SESSION_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}\Z")
 
@@ -125,6 +126,17 @@ def _validate_events(events: list[SessionEvent], session_id: str) -> _State:
                     state.attempts[attempt_id] = event.run_id
                 case "model.failed" | "model.interrupted":
                     _end_attempt(state, data.get("attempt_id"), event.run_id)
+                case "assistant.delta":
+                    attempt_id = data.get("attempt_id")
+                    if (
+                        not isinstance(attempt_id, str)
+                        or attempt_id not in state.attempts
+                        or state.attempts[attempt_id] != event.run_id
+                        or attempt_id in state.ended_attempts
+                        or (event.run_id is not None and state.runs[event.run_id])
+                        or not isinstance(data.get("text"), str)
+                    ):
+                        raise _error("invalid streaming delta or closed model attempt")
                 case "assistant.message":
                     if state.pending():
                         raise _error("assistant message before outstanding tool results")
@@ -457,32 +469,33 @@ def _read_events(fd: int, session_id: str, *, repair: bool) -> list[SessionEvent
 def _open_journal(
     workspace: Path, session_id: str, *, create: bool = True
 ) -> tuple[Path, int, int, list[SessionEvent]]:
-    parent = workspace / ".hiro-agent"
-    directory = parent / "sessions"
-    _ensure_directory(parent)
-    _ensure_directory(directory)
-    lock_path = directory / f"{session_id}.lock"
-    lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
-    journal_fd: int | None = None
-    try:
+    with maintenance_lock(workspace / ".hiro-agent"):
+        parent = workspace / ".hiro-agent"
+        directory = parent / "sessions"
+        _ensure_directory(parent)
+        _ensure_directory(directory)
+        lock_path = directory / f"{session_id}.lock"
+        lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        journal_fd: int | None = None
         try:
-            fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise PersistenceError("Session is already open in another process.") from None
-        os.fsync(lock_fd)
-        _fsync_directory(directory)
-        path = directory / f"{session_id}.jsonl"
-        flags = os.O_RDWR | os.O_APPEND | os.O_NOFOLLOW
-        journal_fd = os.open(path, flags | (os.O_CREAT if create else 0), 0o600)
-        os.fsync(journal_fd)
-        _fsync_directory(directory)
-        events = _read_events(journal_fd, session_id, repair=True)
-        return path, lock_fd, journal_fd, events
-    except BaseException:
-        if journal_fd is not None:
-            os.close(journal_fd)
-        os.close(lock_fd)
-        raise
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise PersistenceError("Session is already open in another process.") from None
+            os.fsync(lock_fd)
+            _fsync_directory(directory)
+            path = directory / f"{session_id}.jsonl"
+            flags = os.O_RDWR | os.O_APPEND | os.O_NOFOLLOW
+            journal_fd = os.open(path, flags | (os.O_CREAT if create else 0), 0o600)
+            os.fsync(journal_fd)
+            _fsync_directory(directory)
+            events = _read_events(journal_fd, session_id, repair=True)
+            return path, lock_fd, journal_fd, events
+        except BaseException:
+            if journal_fd is not None:
+                os.close(journal_fd)
+            os.close(lock_fd)
+            raise
 
 
 class JsonlSession(MemorySession):

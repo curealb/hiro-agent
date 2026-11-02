@@ -15,6 +15,7 @@ from prompt_toolkit.input import PipeInput, create_pipe_input
 from prompt_toolkit.output import DummyOutput
 
 from hiro_agent.bot_tui import BotTUI
+from hiro_agent.errors import ConfigurationError
 from hiro_agent.kernel_contracts import (
     InteractionRecord,
     InteractionReply,
@@ -78,6 +79,7 @@ class BackendFake:
         self.submissions: list[tuple[str, str]] = []
         self.replies: list[tuple[str, str, InteractionReply]] = []
         self.cancellations: list[tuple[str, str]] = []
+        self.resolutions: list[tuple[str, str, str]] = []
         self.worker = WorkerProbe()
         self.worker_starts = 0
         self.closed = False
@@ -127,7 +129,23 @@ class BackendFake:
 
     def cancel(self, bot_id: str, task_id: str) -> TaskRecord:
         self.cancellations.append((bot_id, task_id))
-        return next(task for task in self.conversations[bot_id].tasks if task.id == task_id)
+        snapshot = self.conversations[bot_id]
+        task = next(task for task in snapshot.tasks if task.id == task_id)
+        saved = task.model_copy(update={"cancel_requested": True})
+        self.conversations[bot_id] = replace(
+            snapshot, tasks=tuple(saved if item.id == task_id else item for item in snapshot.tasks)
+        )
+        return saved
+
+    def resolve_cancel(self, bot_id: str, task_id: str, note: str) -> TaskRecord:
+        self.resolutions.append((bot_id, task_id, note))
+        snapshot = self.conversations[bot_id]
+        task = next(task for task in snapshot.tasks if task.id == task_id)
+        saved = task.model_copy(update={"state": TaskState.CANCELLED})
+        self.conversations[bot_id] = replace(
+            snapshot, tasks=tuple(saved if item.id == task_id else item for item in snapshot.tasks)
+        )
+        return saved
 
     def worker_running(self) -> bool:
         return not self.worker.stopped
@@ -428,6 +446,125 @@ async def test_cancel_dialog_cancels_only_selected_task_and_escape_is_safe(
     await keyboard.send("\x1b[B \t\r", lambda: keyboard.ui.dialog is None)
     await keyboard.send(ALT_DOWN, lambda: keyboard.ui.selected_bot_id == BETA)
     assert keyboard.backend.cancellations == [(ALPHA, snapshot.tasks[0].id)]
+
+
+async def test_uncertain_cancel_requires_note_and_explicit_confirmation(keyboard: Keyboard) -> None:
+    snapshot = keyboard.backend.conversations[ALPHA]
+    uncertain = snapshot.tasks[0].model_copy(
+        update={"state": TaskState.NEEDS_RECONCILIATION, "reason": "已开始的 Run 缺少执行日志"}
+    )
+    keyboard.backend.conversations[ALPHA] = replace(snapshot, tasks=(uncertain,))
+    await keyboard.start()
+    await keyboard.send(F8, lambda: keyboard.ui.dialog is not None)
+    assert "待核实" in keyboard.screen
+    await keyboard.send(" \t\r", lambda: "核实并取消任务" in keyboard.screen)
+    assert "不会撤销已发生的改动" in keyboard.screen
+    assert not keyboard.backend.resolutions
+    await keyboard.send("\t\t\r", lambda: "请填写核实说明" in keyboard.screen)
+    assert not keyboard.backend.resolutions
+    await keyboard.send("\x1b", lambda: keyboard.ui.dialog is None)
+    assert not keyboard.backend.cancellations
+    assert not keyboard.backend.resolutions
+
+    await keyboard.send(F8, lambda: keyboard.ui.dialog is not None)
+    await keyboard.send(" \t\r", lambda: "核实并取消任务" in keyboard.screen)
+    await keyboard.send(ALT_DOWN, lambda: keyboard.ui.dialog is not None)
+    assert keyboard.ui.selected_bot_id == ALPHA
+    await keyboard.send("已核实初始化失败\t\t\r", lambda: keyboard.ui.dialog is None)
+    await keyboard.send(ALT_DOWN, lambda: keyboard.ui.selected_bot_id == BETA)
+    assert keyboard.backend.resolutions == [(ALPHA, uncertain.id, "已核实初始化失败")]
+    assert not keyboard.backend.cancellations
+    assert keyboard.backend.conversations[ALPHA].tasks[0].state == TaskState.CANCELLED
+
+
+async def test_batch_cancel_supports_empty_selection_select_all_and_select_none(
+    keyboard: Keyboard,
+) -> None:
+    snapshot = keyboard.backend.conversations[ALPHA]
+    tasks = tuple(keyboard.backend.task(ALPHA, suffix=f"-{index}") for index in range(3))
+    keyboard.backend.conversations[ALPHA] = replace(snapshot, tasks=tasks)
+    await keyboard.start()
+    await keyboard.send(F8, lambda: keyboard.ui.dialog is not None)
+    await keyboard.send("\t\r", lambda: "请至少勾选一项任务" in keyboard.screen)
+    assert not keyboard.backend.cancellations
+    # Focus moves from the cancel button to select-all; its handler returns to the list.
+    await keyboard.send("\t\r", lambda: keyboard.screen.count("[*]") == 3)
+    await keyboard.send("\t\t\t\r", lambda: keyboard.screen.count("[*]") == 0)
+    await keyboard.send(" \x1b[B \t\r", lambda: keyboard.ui.dialog is None)
+    await keyboard.send(ALT_DOWN, lambda: keyboard.ui.selected_bot_id == BETA)
+    assert keyboard.backend.cancellations == [(ALPHA, tasks[2].id), (ALPHA, tasks[1].id)]
+    assert not keyboard.backend.resolutions
+    assert "已请求停止 2 项" in keyboard.ui.notice
+
+
+async def test_batch_cancel_mixed_tasks_uses_one_note_and_pins_selected_bot(
+    keyboard: Keyboard,
+) -> None:
+    snapshot = keyboard.backend.conversations[ALPHA]
+    first = snapshot.tasks[0].model_copy(update={"state": TaskState.NEEDS_RECONCILIATION})
+    second = keyboard.backend.task(ALPHA, suffix="-uncertain").model_copy(
+        update={"state": TaskState.NEEDS_RECONCILIATION}
+    )
+    active = keyboard.backend.task(ALPHA, suffix="-active")
+    keyboard.backend.conversations[ALPHA] = replace(snapshot, tasks=(first, second, active))
+    await keyboard.start()
+    await keyboard.send(F8, lambda: keyboard.ui.dialog is not None)
+    await keyboard.send("\t\t\r", lambda: keyboard.screen.count("[*]") == 3)
+    await keyboard.send("\t\r", lambda: "核实并取消任务" in keyboard.screen)
+    assert "已选择 3 项任务，其中 2 项待核实" in keyboard.screen
+    assert not keyboard.backend.cancellations
+    assert not keyboard.backend.resolutions
+    await keyboard.send("\x1b", lambda: keyboard.ui.dialog is None)
+    assert not keyboard.backend.cancellations
+    assert not keyboard.backend.resolutions
+
+    await keyboard.send(F8, lambda: keyboard.ui.dialog is not None)
+    await keyboard.send("\t\t\r", lambda: keyboard.screen.count("[*]") == 3)
+    await keyboard.send("\t\r", lambda: "核实并取消任务" in keyboard.screen)
+    await keyboard.send("已逐项检查执行结果\t\t\r", lambda: keyboard.ui.dialog is None)
+    await keyboard.send(ALT_DOWN, lambda: keyboard.ui.selected_bot_id == BETA)
+    await keyboard.rendered(keyboard.ui.app.invalidate, lambda: "已取消 2 项" in keyboard.ui.notice)
+    assert keyboard.backend.cancellations == [(ALPHA, active.id)]
+    assert keyboard.backend.resolutions == [
+        (ALPHA, second.id, "已逐项检查执行结果"),
+        (ALPHA, first.id, "已逐项检查执行结果"),
+    ]
+    assert "已请求停止 1 项" in keyboard.ui.notice
+
+
+async def test_batch_cancel_continues_after_failure_without_cancelling_retried_task(
+    keyboard: Keyboard, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    snapshot = keyboard.backend.conversations[ALPHA]
+    uncertain = keyboard.backend.task(ALPHA, suffix="-stale").model_copy(
+        update={"state": TaskState.NEEDS_RECONCILIATION}
+    )
+    final = keyboard.backend.task(ALPHA, suffix="-last")
+    selected = (snapshot.tasks[0], uncertain, final)
+
+    def stale_resolution(bot_id: str, task_id: str, note: str) -> TaskRecord:
+        raise ConfigurationError("任务已在其他入口重试")
+
+    monkeypatch.setattr(keyboard.backend, "resolve_cancel", stale_resolution)
+    keyboard.backend.conversations[ALPHA] = replace(snapshot, tasks=selected)
+    await keyboard.ui._cancel_tasks(ALPHA, selected, "checked")
+    assert keyboard.backend.cancellations == [(ALPHA, selected[0].id), (ALPHA, final.id)]
+    assert "已请求停止 2 项" in keyboard.ui.notice
+    assert "失败 1 项" in keyboard.ui.notice
+    assert uncertain.id in keyboard.ui.notice
+
+
+async def test_batch_cancel_reports_newly_uncertain_task_as_failure(keyboard: Keyboard) -> None:
+    task = keyboard.backend.conversations[ALPHA].tasks[0]
+    snapshot = keyboard.backend.conversations[ALPHA]
+    keyboard.backend.conversations[ALPHA] = replace(
+        snapshot, tasks=(task.model_copy(update={"state": TaskState.NEEDS_RECONCILIATION}),)
+    )
+    await keyboard.ui._cancel_tasks(ALPHA, (task,))
+    assert "已取消 0 项" in keyboard.ui.notice
+    assert "失败 1 项" in keyboard.ui.notice
+    assert "请重新选择并填写核实说明" in keyboard.ui.notice
+    assert not keyboard.backend.resolutions
 
 
 async def test_question_draft_survives_closing_and_reopening_dialog(keyboard: Keyboard) -> None:

@@ -2,13 +2,78 @@
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
+import os
 import sqlite3
+import stat
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 
 from hiro_agent.errors import PersistenceError
+
+_maintenance_held: ContextVar[tuple[tuple[Path, bool], ...]] = ContextVar(
+    "kernel_maintenance_held", default=()
+)
+
+
+@contextmanager
+def maintenance_lock(
+    directory: Path, *, exclusive: bool = False, allow_pending: bool = False
+) -> Iterator[None]:
+    """Coordinate short maintenance with live workers; nested shared use is safe.
+
+    Exclusive acquisition never waits for running tasks. A leftover staging
+    manifest blocks writers until the user retries the interrupted cleanup.
+    """
+    directory = directory.absolute()
+    held = _maintenance_held.get()
+    for path, owns_exclusive in held:
+        if path == directory:
+            if exclusive and not owns_exclusive:
+                raise PersistenceError("历史清理失败：内核正在使用，请稍后重试。")
+            yield
+            return
+    descriptor: int | None = None
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        if directory.is_symlink():
+            raise PersistenceError("历史清理锁目录不安全。")
+        descriptor = os.open(
+            directory / "maintenance.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600
+        )
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise PersistenceError("历史清理锁不是普通文件。")
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB if exclusive else fcntl.LOCK_SH)
+        except BlockingIOError:
+            raise PersistenceError("历史清理失败：内核正在执行任务，请待任务结束后重试。") from None
+        if (
+            not exclusive
+            and not allow_pending
+            and (
+                (directory / "history-cleanup").exists()
+                or (directory / "history-cleanup").is_symlink()
+            )
+        ):
+            raise PersistenceError("上次历史清理尚未完成，请重试清理命令以恢复。")
+    except OSError as exc:
+        if descriptor is not None:
+            os.close(descriptor)
+        raise PersistenceError("历史清理锁无法访问。") from exc
+    except BaseException:
+        if descriptor is not None:
+            os.close(descriptor)
+        raise
+    token = _maintenance_held.set((*held, (directory, exclusive)))
+    try:
+        yield
+    finally:
+        _maintenance_held.reset(token)
+        if descriptor is not None:
+            os.close(descriptor)
 
 
 class KernelDatabase:
@@ -49,7 +114,7 @@ class KernelDatabase:
 
     @contextmanager
     def transaction(self) -> Iterator[sqlite3.Connection]:
-        with self.connect() as connection:
+        with maintenance_lock(self.path.parent), self.connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             try:
                 yield connection

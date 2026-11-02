@@ -27,7 +27,7 @@ from hiro_agent.kernel_contracts import (
     canonical_arguments,
     utc_now,
 )
-from hiro_agent.kernel_db import KernelDatabase
+from hiro_agent.kernel_db import KernelDatabase, maintenance_lock
 
 
 class TaskStore:
@@ -69,64 +69,68 @@ class TaskStore:
                 self.chains.join(connection, task)
 
     def submit(self, request: TaskSubmission) -> TaskRecord:
-        # Snapshot mutable input; canonical JSON also rejects NaN in caller metadata.
-        submission = canonical_arguments(request.model_dump(mode="json"))
-        request = TaskSubmission.model_validate_json(submission)
-        bot = self.bots.get(request.bot_id)
-        with self.database.transaction() as connection:
-            if request.idempotency_key is not None:
-                previous = connection.execute(
-                    "SELECT record_json, submission_json FROM durable_tasks "
-                    "WHERE bot_id=? AND idempotency_key=?",
-                    (request.bot_id, request.idempotency_key),
+        with maintenance_lock(self.database.path.parent):
+            # Snapshot mutable input; canonical JSON also rejects NaN in caller metadata.
+            submission = canonical_arguments(request.model_dump(mode="json"))
+            request = TaskSubmission.model_validate_json(submission)
+            bot = self.bots.get(request.bot_id)
+            with self.database.transaction() as connection:
+                if request.idempotency_key is not None:
+                    previous = connection.execute(
+                        "SELECT record_json, submission_json FROM durable_tasks "
+                        "WHERE bot_id=? AND idempotency_key=?",
+                        (request.bot_id, request.idempotency_key),
+                    ).fetchone()
+                    if previous is not None:
+                        previous_request = TaskSubmission.model_validate_json(
+                            previous["submission_json"]
+                        )
+                        if (
+                            canonical_arguments(previous_request.model_dump(mode="json"))
+                            != submission
+                        ):
+                            raise ConfigurationError("任务幂等键已用于不同的请求")
+                        return TaskRecord.model_validate_json(previous["record_json"])
+                task = TaskRecord(
+                    id=uuid4().hex,
+                    session_id=uuid4().hex,
+                    bot_id=request.bot_id,
+                    text=request.text,
+                    source=request.source,
+                    idempotency_key=request.idempotency_key,
+                    budget=request.budget or bot.config.budget,
+                    chain_id=request.chain_id,
+                    parent_task_id=request.parent_task_id,
+                    metadata=request.metadata,
+                )
+                parent = connection.execute(
+                    "SELECT record_json FROM durable_tasks WHERE id=?", (request.parent_task_id,)
                 ).fetchone()
-                if previous is not None:
-                    previous_request = TaskSubmission.model_validate_json(
-                        previous["submission_json"]
-                    )
-                    if canonical_arguments(previous_request.model_dump(mode="json")) != submission:
-                        raise ConfigurationError("任务幂等键已用于不同的请求")
-                    return TaskRecord.model_validate_json(previous["record_json"])
-            task = TaskRecord(
-                id=uuid4().hex,
-                session_id=uuid4().hex,
-                bot_id=request.bot_id,
-                text=request.text,
-                source=request.source,
-                idempotency_key=request.idempotency_key,
-                budget=request.budget or bot.config.budget,
-                chain_id=request.chain_id,
-                parent_task_id=request.parent_task_id,
-                metadata=request.metadata,
-            )
-            parent = connection.execute(
-                "SELECT record_json FROM durable_tasks WHERE id=?", (request.parent_task_id,)
-            ).fetchone()
-            if parent is not None:
-                parent_task = TaskRecord.model_validate_json(parent[0])
-                if request.chain_id is not None and request.chain_id != parent_task.chain_id:
-                    raise ConfigurationError("Child Task cannot change its parent's chain")
-                if request.chain_budget is not None or request.chain_max_hops is not None:
-                    raise ConfigurationError("Only root Tasks may set chain limits")
-                task.chain_id = parent_task.chain_id
-            task.chain_id = task.chain_id or task.id
-            connection.execute(
-                "INSERT INTO durable_tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    task.id,
-                    task.bot_id,
-                    task.session_id,
-                    task.idempotency_key,
-                    task.state,
-                    task.created_at.isoformat(),
-                    task.model_dump_json(),
-                    submission,
-                ),
-            )
-            self.chains.join(
-                connection, task, budget=request.chain_budget, max_hops=request.chain_max_hops
-            )
-            return task
+                if parent is not None:
+                    parent_task = TaskRecord.model_validate_json(parent[0])
+                    if request.chain_id is not None and request.chain_id != parent_task.chain_id:
+                        raise ConfigurationError("Child Task cannot change its parent's chain")
+                    if request.chain_budget is not None or request.chain_max_hops is not None:
+                        raise ConfigurationError("Only root Tasks may set chain limits")
+                    task.chain_id = parent_task.chain_id
+                task.chain_id = task.chain_id or task.id
+                connection.execute(
+                    "INSERT INTO durable_tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        task.id,
+                        task.bot_id,
+                        task.session_id,
+                        task.idempotency_key,
+                        task.state,
+                        task.created_at.isoformat(),
+                        task.model_dump_json(),
+                        submission,
+                    ),
+                )
+                self.chains.join(
+                    connection, task, budget=request.chain_budget, max_hops=request.chain_max_hops
+                )
+                return task
 
     def chain(self, task_id: str, *, bot_id: str | None = None) -> ChainRecord:
         with self.database.connect() as connection:

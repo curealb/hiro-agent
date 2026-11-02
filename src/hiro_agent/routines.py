@@ -20,7 +20,7 @@ from hiro_agent.kernel_contracts import (
     canonical_arguments,
     utc_now,
 )
-from hiro_agent.kernel_db import KernelDatabase
+from hiro_agent.kernel_db import KernelDatabase, maintenance_lock
 
 
 def _utc(value: datetime) -> datetime:
@@ -224,20 +224,21 @@ class RoutineStore:
         tick resumes pending work. Do not use this return list as a durable event
         stream: use triggers() or the Task API to query committed work.
         """
-        if type(max_triggers) is not int or not 1 <= max_triggers <= 1000:
-            raise ConfigurationError("每次 tick 的 max_triggers 必须是 1 到 1000 的整数")
-        current_time = self._now(now)
-        dispatched: list[RoutineTrigger] = []
-        for _ in range(max_triggers):
-            pending = self._reserve(current_time)
-            if pending is None:
-                break
-            # Never hold our transaction while TaskStore starts its own transaction.
-            task = self.tasks.submit(pending.submission)
-            acknowledged = self._acknowledge(pending, task.id, current_time)
-            if acknowledged is not None:
-                dispatched.append(acknowledged)
-        return dispatched
+        with maintenance_lock(self.database.path.parent):
+            if type(max_triggers) is not int or not 1 <= max_triggers <= 1000:
+                raise ConfigurationError("每次 tick 的 max_triggers 必须是 1 到 1000 的整数")
+            current_time = self._now(now)
+            dispatched: list[RoutineTrigger] = []
+            for _ in range(max_triggers):
+                pending = self._reserve(current_time)
+                if pending is None:
+                    break
+                # Never hold our transaction while TaskStore starts its own transaction.
+                task = self.tasks.submit(pending.submission)
+                acknowledged = self._acknowledge(pending, task.id, current_time)
+                if acknowledged is not None:
+                    dispatched.append(acknowledged)
+            return dispatched
 
     def _reserve(self, now: datetime) -> RoutineTrigger | None:
         with self.database.transaction() as connection:

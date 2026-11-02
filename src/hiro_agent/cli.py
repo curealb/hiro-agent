@@ -23,6 +23,7 @@ from prompt_toolkit.patch_stdout import patch_stdout
 from rich.console import Console
 from rich.text import Text
 
+from hiro_agent.agent_communication import COMMUNICATION_TOOLS
 from hiro_agent.bootstrap import Harness, create_harness
 from hiro_agent.config import BotConfig, Config, load_config
 from hiro_agent.contracts import AgentService, RunResult
@@ -38,7 +39,12 @@ from hiro_agent.session import delete_session, list_sessions
 from hiro_agent.session_picker import SessionPicker
 from hiro_agent.tasks import TaskSummary, list_tasks, summarize_tasks
 from hiro_agent.terminal_ui import TERMINAL_STYLE, TerminalInterface
-from hiro_agent.ui_commands import NAVIGATION_COMMANDS, AgentCommandCompleter, resolve_agent
+from hiro_agent.ui_commands import (
+    NAVIGATION_COMMANDS,
+    AgentCommandCompleter,
+    addressed_agent,
+    resolve_agent,
+)
 
 if TYPE_CHECKING:
     from hiro_agent.bot_tui import BotTUI
@@ -540,7 +546,33 @@ async def chat_loop(
                 )
                 continue
             if text.startswith("/") and text != "/continue":
-                console.print("未知命令。" + HELP, markup=False)
+                try:
+                    address = addressed_agent(text, terminal.agent_choices, SLASH_COMMANDS)
+                    if address is None:
+                        raise ConfigurationError("未知命令。" + HELP)
+                    bound = next(
+                        (
+                            e.data["bot_id"]
+                            for e in harness.session.events
+                            if e.type == "session.bot"
+                        ),
+                        None,
+                    )
+                    if bound is None:
+                        raise ConfigurationError("Agent 通信需要持久身份，请先用 /tui 打开工作台")
+                    from hiro_agent.tui_backend import TuiBackend
+
+                    backend = TuiBackend(workspace)
+                    task = backend.submit(bound, text)
+                    backend.start_worker()
+                    names = "、".join(target.name for target in address.targets)
+                    console.print(
+                        f"已向「{names}」提交通信任务；标识自动生成，当前对话保持不变。"
+                        f"\n任务 ID：{task.id}；输入 /tui 查看真实回复和核验结果。",
+                        markup=False,
+                    )
+                except (HiroError, OSError) as exc:
+                    console.print(str(exc), style="red", markup=False)
                 continue
             # During a run SIGINT requests cooperative cancellation without
             # killing the REPL. PromptSession handles Ctrl+C while idle.
@@ -591,7 +623,15 @@ def configured(path: Path | None, *, mock: bool = False, subagents: bool = False
 def with_default_bot(config: Config) -> Config:
     config = config.model_copy(deep=True)
     if config.bot is None:
-        tools = ["list_files", "read_file", "search_text", "write_file", "edit_file", "run_command"]
+        tools = [
+            "list_files",
+            "read_file",
+            "search_text",
+            "write_file",
+            "edit_file",
+            "run_command",
+            *COMMUNICATION_TOOLS,
+        ]
         if config.subagents.enabled:
             tools.append("delegate_task")
         config.bot = BotConfig(id="default", name="Hiro", allowed_tools=tuple(tools))
@@ -689,6 +729,19 @@ async def _run_interfaces(
     chat_sessions: dict[str, str] = {}
     persist_bot = True
     terminal = Terminal()
+
+    def remembered_session(bot_id: str) -> str | None:
+        session_id = chat_sessions.get(bot_id)
+        if (
+            session_id
+            and not (workspace / ".hiro-agent" / "sessions" / f"{session_id}.jsonl").is_file()
+        ):
+            # /clear or an external cleanup can remove a closed chat while the
+            # user is in the TUI. Re-enter that Bot with a fresh conversation.
+            chat_sessions.pop(bot_id, None)
+            return None
+        return session_id
+
     try:
         while True:
             if mode == "tui":
@@ -701,7 +754,7 @@ async def _run_interfaces(
                 if selected is None:
                     selected = ensure_navigation_bot(backend, config)
                 config = backend.kernel.bots.get(selected).config
-                resume = chat_sessions.get(selected)
+                resume = remembered_session(selected)
                 persist_bot = False
             request = await chat_loop(
                 workspace,
@@ -721,7 +774,7 @@ async def _run_interfaces(
             chat_sessions[source] = request.session_id
             target = request.target_bot_id or source
             config = backend.kernel.bots.get(target).config
-            resume = chat_sessions.get(target)
+            resume = remembered_session(target)
             persist_bot = False
             mode = request.mode
             if mode == "tui":

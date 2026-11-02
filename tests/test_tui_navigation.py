@@ -40,8 +40,6 @@ async def test_completion_selects_command_and_agent_without_submitting(keyboard:
     await keyboard.send(" Beta", lambda: keyboard.ui.composer.buffer.complete_state is not None)
     assert "Beta Agent" in keyboard.screen
     await keyboard.send("\t", lambda: keyboard.ui.composer.text == f"/agent {BETA}")
-    await keyboard.send("\r", lambda: keyboard.ui.composer.buffer.complete_state is None)
-    assert keyboard.ui.selected_bot_id == ALPHA
     await keyboard.send("\r", lambda: keyboard.ui.selected_bot_id == BETA)
     assert keyboard.ui.composer.text == "beta draft"
     assert keyboard.ui.drafts[ALPHA] == ""
@@ -52,11 +50,77 @@ async def test_completion_selects_command_and_agent_without_submitting(keyboard:
 async def test_completion_arrow_keys_and_escape_keep_navigation_local(keyboard: Keyboard) -> None:
     await keyboard.start()
     await keyboard.send("/", lambda: keyboard.ui.composer.buffer.complete_state is not None)
-    await keyboard.send("\x1b[B", lambda: keyboard.ui.composer.text == "/agent")
-    await keyboard.send("\x1b[B", lambda: keyboard.ui.composer.text == "/tui")
-    await keyboard.send("\x1b[A", lambda: keyboard.ui.composer.text == "/agent")
+    await keyboard.send("\x1b[B", lambda: keyboard.ui.composer.text == f"/{ALPHA} ")
+    await keyboard.send("\x1b[B", lambda: keyboard.ui.composer.text == f"/{BETA} ")
+    await keyboard.send("\x1b[A", lambda: keyboard.ui.composer.text == f"/{ALPHA} ")
     await keyboard.send("\x1b", lambda: keyboard.ui.composer.buffer.complete_state is None)
     assert keyboard.ui.composer.text == "/"
+    assert keyboard.ui.selected_bot_id == ALPHA
+    assert not keyboard.backend.submissions
+
+
+async def test_slash_selects_communication_target_without_switching(keyboard: Keyboard) -> None:
+    keyboard.backend.summaries = [
+        replace(bot, name=name)
+        for bot, name in zip(
+            keyboard.backend.summaries, ("代码编写员", "通信测试发送方"), strict=True
+        )
+    ]
+    keyboard.ui.drafts[BETA] = "要发给发送方的草稿"
+    await keyboard.start()
+    await keyboard.send("/", lambda: keyboard.ui.composer.buffer.complete_state is not None)
+    state = keyboard.ui.composer.buffer.complete_state
+    assert [c.display_text for c in state.completions[:2]] == ["代码编写员", "通信测试发送方"]
+    assert "通信测试发送方" in keyboard.screen
+    await keyboard.send("\x1b[B\x1b[B", lambda: keyboard.ui.composer.text == f"/{BETA} ")
+    await keyboard.send("\r", lambda: keyboard.ui.composer.buffer.complete_state is None)
+    assert keyboard.ui.selected_bot_id == ALPHA
+    assert keyboard.ui.drafts[BETA] == "要发给发送方的草稿"
+    assert not keyboard.backend.submissions
+    await keyboard.send("重新测试一下\r", lambda: bool(keyboard.backend.submissions))
+    assert keyboard.backend.submissions == [(ALPHA, f"/{BETA} 重新测试一下")]
+    assert keyboard.ui.selected_bot_id == ALPHA
+
+
+async def test_slash_adds_second_target_without_replacing_first_or_switching(
+    keyboard: Keyboard,
+) -> None:
+    await keyboard.start()
+    await keyboard.send(
+        f"/{ALPHA} /",
+        lambda: keyboard.ui.composer.buffer.complete_state is not None,
+    )
+    state = keyboard.ui.composer.buffer.complete_state
+    assert len(state.completions) == 1
+    assert state.completions[0].display_text == "Beta Agent"
+    await keyboard.send("\r", lambda: keyboard.ui.composer.text == f"/{ALPHA} /{BETA} ")
+    assert keyboard.ui.selected_bot_id == ALPHA
+    assert not keyboard.backend.submissions
+    await keyboard.send("一起检查这个问题\r", lambda: bool(keyboard.backend.submissions))
+    assert keyboard.backend.submissions == [(ALPHA, f"/{ALPHA} /{BETA} 一起检查这个问题")]
+    assert keyboard.ui.selected_bot_id == ALPHA
+
+
+@pytest.mark.parametrize("duplicate_names", [False, True])
+async def test_slash_filters_by_name_and_resolves_selected_agent_id(
+    keyboard: Keyboard,
+    duplicate_names: bool,
+) -> None:
+    keyboard.backend.summaries = [
+        replace(
+            bot, name="通信测试发送方" if duplicate_names or bot.bot_id == BETA else "代码编写员"
+        )
+        for bot in keyboard.backend.summaries
+    ]
+    await keyboard.start()
+    await keyboard.send("/发送", lambda: keyboard.ui.composer.buffer.complete_state is not None)
+    state = keyboard.ui.composer.buffer.complete_state
+    assert len(state.completions) == (2 if duplicate_names else 1)
+    if duplicate_names:
+        assert state.completions[0].display_meta_text != state.completions[1].display_meta_text
+        await keyboard.send("\x1b[B\x1b[B", lambda: keyboard.ui.composer.text == f"/{BETA} ")
+    await keyboard.send("\r", lambda: keyboard.ui.composer.buffer.complete_state is None)
+    assert keyboard.ui.composer.text == f"/{BETA} "
     assert keyboard.ui.selected_bot_id == ALPHA
     assert not keyboard.backend.submissions
 
@@ -204,7 +268,9 @@ async def test_interface_exit_waits_for_submission_persistence(
     gate = threading.Event()
     keyboard.backend.submit_gate = gate
     task = await keyboard.start()
-    await keyboard.send("save this\r", lambda: bool(keyboard.backend.submissions))
+    # The background thread can enter after the submission frame is painted;
+    # wait for the UI's in-flight state, which is what guards navigation.
+    await keyboard.send("save this\r", lambda: ALPHA in keyboard.ui._submitting)
     await keyboard.send(command + "\r", lambda: "正在保存" in keyboard.ui.notice)
     assert keyboard.ui.exit_action is None
     assert keyboard.ui.composer.text == command

@@ -16,22 +16,28 @@
 
 ## 最小 Bot 内核
 
-最小内核已按「实现 → 独立验收 → 下游实现」完成全部四个阶段，保留现有单次 `AgentService` 和 CLI 行为。开发范围、接口与每次验收证据见 [DAG 状态](docs/kernel/STATUS.md)、[接口契约](docs/kernel/CONTRACTS.md)和[需求](docs/kernel/REQUIREMENTS.md)。
+最小内核提供持久 Bot 身份、任务执行、记忆和跨 Bot 交接，并保留现有单次 `AgentService` 和 CLI 行为。范围与接口见[需求](docs/kernel/REQUIREMENTS.md)和[接口契约](docs/kernel/CONTRACTS.md)，验证方式见[开发指南](docs/development.md)。
 
-| 阶段 | 状态与能力 |
+| 模块 | 能力 |
 | --- | --- |
-| R1 基础契约 | **已通过**：SQLite Bot 身份与配置、版本化工具白名单、执行端权限检查、Session 绑定及子 Agent 权限继承；522 项测试通过。 |
-| R2 持久执行 | **已通过**：SQLite 持久任务、独立单 worker、审批/提问跨进程恢复、一次性授权与累计预算；683 项测试通过。 |
-| R3 可重复工作 | **已通过**：Bot 独立记忆、任务摘要、工具配对完整的上下文压缩、文本 Skills、一次性与固定间隔触发；799 项测试通过。 |
-| R4 完整闭环 | **已通过**：双 Bot 持久交接与结果任务、跨 Bot 累计预算和交接次数限制；832 项测试通过。 |
+| 基础契约 | SQLite Bot 身份与配置、版本化工具白名单、执行端权限检查、Session 绑定及子 Agent 权限继承。 |
+| 持久执行 | SQLite 持久任务、独立单 worker、审批/提问跨进程恢复、一次性授权与累计预算。 |
+| 可重复工作 | Bot 独立记忆、任务摘要、工具配对完整的上下文压缩、文本 Skills、一次性与固定间隔触发。 |
+| 跨 Bot 协作 | 双 Bot 持久交接与结果任务、跨 Bot 累计预算和交接次数限制。 |
 
 Bot 配置通过可选 `bot` 字段启用，包含稳定 `id`、`name`、`instructions` 和 `allowed_tools`；省略该字段的旧配置保持兼容。持久数据位于工作区 `.hiro-agent/kernel.sqlite3`，原始执行日志仍保存在 `.hiro-agent/sessions/`。使用 `hiro-agent kernel` 管理 Bot、提交任务、启动独立 worker 和答复交互，具体命令见 [内核使用指南](docs/kernel/USAGE.md)。
 
-审批挂起会结算旧调用，批准后在新 Run 中执行保存的精确操作；授权绑定任务、参数和权限版本，任务累计预算不会因续跑重置，等待不计执行时间。未知副作用进入 `needs_reconciliation`，不会自动重放。独立验收覆盖四个 SQLite/JSONL 崩溃窗口，证据和恢复边界见 [R1 报告](docs/kernel/reviews/R1.md)与 [R2 报告](docs/kernel/reviews/R2.md)。
+`hiro-agent kernel agent-manager --source default -w /path/to/project` 可新增「Agent 管理员」，继承已有 Bot 的模型设置。向管理员描述需要的 Agent，它通过 `create_agent` 在审批后创建长期保留在 TUI 左侧的新身份，并可用 `list_agents` 查看已有 Agent。新身份只能获得创建者已有工具的子集，创建不会覆盖已有 ID。操作示例见 [TUI 指南](docs/tui.md)。
 
-`kernel memory-*` 管理每个 Bot 的记忆；每次请求重新读取当前记忆，删除不抹去历史审计。`kernel skill-*` 管理 Markdown 技能与成功任务草稿，正文通过白名单中的 `read_skill` 读取，技能不会扩展权限。`kernel routine-*` 管理一次性或固定间隔触发，所有触发经统一 Task 入口去重；独立 worker 在执行长任务时继续接收定时任务。组合场景与原始日志保留已通过 [R3 验收](docs/kernel/reviews/R3.md)。
+TUI 中可用 `/clear` 清空当前 Agent 的会话、任务和记忆，`/delete-agent` 删除当前 Agent，`/init-agents` 补齐 Hiro、Agent 管理员、代码编写员。终端对应 `kernel clear-history`、`kernel bot-delete`、`kernel init-agents`；清理与删除需要确认，初始化保留已有身份和历史。
 
-`send_handoff` 将工作交给另一 Bot，审阅结果通过关联任务回到原 Bot；`read_handoff` 和 `kernel handoff-result` 可读取结果。交接与回传任务使用同一份持久链预算，默认最多 8 次显式交接，回传不会自动形成下一轮互聊。定时巡检 → 报告 → 等待审批 → 重启 → 批准写入 → 第二 Bot 审阅 → 原 Bot 处理结果，已通过 [R4 独立验收](docs/kernel/reviews/R4.md)，报告附真实进程、SQLite 和 JSONL 证据。
+审批挂起会结算旧调用，批准后在新 Run 中执行保存的精确操作；授权绑定任务、参数和权限版本，任务累计预算不会因续跑重置，等待不计执行时间。未知副作用进入 `needs_reconciliation`，不会自动重放。SQLite/JSONL 崩溃窗口与恢复边界见[接口契约](docs/kernel/CONTRACTS.md)。
+
+`kernel memory-*` 管理每个 Bot 的记忆；每次请求重新读取当前记忆，删除不抹去历史审计。`kernel skill-*` 管理 Markdown 技能与成功任务草稿，正文通过白名单中的 `read_skill` 读取，技能不会扩展权限。`kernel routine-*` 管理一次性或固定间隔触发，所有触发经统一 Task 入口去重；独立 worker 在执行长任务时继续接收定时任务。
+
+`send_handoff` 将工作交给另一 Bot，审阅结果通过关联任务回到原 Bot；`read_handoff` 和 `kernel handoff-result` 可读取结果。交接与回传任务使用同一份持久链预算，默认最多 8 次显式交接，回传不会自动形成下一轮互聊。支持定时巡检、等待审批、重启续跑、第二 Bot 审阅和原 Bot 处理结果的完整流程。
+
+TUI 中的直接 Agent 通信使用 `send_message` / `read_message`，携带 `correlation_id`，通过真实持久消息、接收方执行和自动回复任务完成往返。新标准 Agent 和管理员具备通信权限；已有身份使用 `kernel enable-communication AGENT_ID` 开启并重启旧 worker。发送被接受与收到匹配回复分别核验，详见[通信示例](docs/kernel/USAGE.md#agent-直接通信)。
 
 入口：`hiro-agent kernel --help`。完整配置与操作步骤见 [内核使用指南](docs/kernel/USAGE.md)。范围限定为单用户、本地单 worker；不承诺外部副作用恰好发生一次，结果未知时保留现场并要求显式核实。
 
@@ -113,7 +119,7 @@ uv run hiro-agent tui -w /path/to/your/project -c writer.json -c reviewer.json -
 
 ![多 Agent TUI：左侧切换，右侧对话与待处理请求](docs/images/tui-preview.png)
 
-图片来自实际 TUI 渲染，内容为布局示例。鼠标点击 Agent 即可切换；键盘用 `F2`、`↑/↓`、`Enter`，或直接 `Alt+↑/↓`。`Enter` 发送，`Alt+Enter` 换行；`F3` 处理审批/提问，`F8` 选择要取消的任务。`Ctrl+Q` 退出界面，已提交任务继续由独立 worker 执行。
+图片来自实际 TUI 渲染，内容为布局示例。鼠标点击 Agent 即可切换；键盘用 `F2`、`↑/↓`、`Enter`，或直接 `Alt+↑/↓`。`Enter` 发送，`Alt+Enter` 换行；`F3` 处理审批/提问，`F8` 多选或全选任务批量取消（待核实任务需统一填写核实说明并确认）。`F4` 或 `/select` 进入文字选择模式，拖选后用终端快捷键复制，`F4` / `Esc` 返回。`Ctrl+Q` 退出界面，已提交任务继续由独立 worker 执行。
 
 输入 `/agent ID` 或 `/agent 完整名称` 切换 Agent，`/agent` 打开列表；输入 `/chat` 切换到传统聊天，再用 `/tui` 返回。导航命令支持补全，不会提交模型任务。同一次启动中，各 Agent 的传统聊天 Session 和 TUI 草稿都会保留。TUI 的持久任务汇总与传统聊天历史分别保存，不自动合并；切换不会移动或重放 worker 任务。
 

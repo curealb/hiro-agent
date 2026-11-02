@@ -52,6 +52,58 @@ nohup hiro-agent kernel worker -w /absolute/workspace > /tmp/hiro-worker.log 2>&
 
 记录 shell 返回的 PID，以 `kill -TERM PID` 停止；前台可按 Ctrl+C。停止会协作取消正在运行的 Agent，等工具清理和日志结算后释放锁。已启动而没有可靠结果的工具会进入待核实状态。强制结束进程后，下次 worker 启动先对账。
 
+## 用管理 Agent 创建永久 Bot
+
+已有 `default` Bot 后，可以创建一个继承其模型、预算和工具权限的管理员：
+
+```sh
+hiro-agent kernel agent-manager --source default -w /absolute/workspace
+hiro-agent tui --agent agent-manager -w /absolute/workspace
+```
+
+默认 ID 为 `agent-manager`、名称为「Agent 管理员」，可通过 `--bot-id`、`--name` 指定其他值。安装只创建新身份，不会覆盖同名 ID；源 Bot 必须允许写入。管理员在源工具白名单上增加 `list_agents`、`create_agent`、`send_message` 和 `read_message`，可为新 Agent 分配通信能力。模型、凭据环境变量名及运行限制从已保存配置继承，工具结果仅返回身份和权限摘要。
+
+向管理员发送「创建一个只读代码审查员，重点检查权限边界」，模型可调用：
+
+```json
+{
+  "id": "code-reviewer",
+  "name": "代码审查员",
+  "instructions": "静态审查代码，优先检查权限边界，结论附文件与行号。",
+  "allowed_tools": ["list_files", "read_file", "search_text"],
+  "permissions": "read-only"
+}
+```
+
+这是 `create_agent` 的参数。该工具按现有写入规则等待审批；批准后，在同一 SQLite 事务内检查授权版本、创建者当前权限和新 ID，再保存完整配置。新 Agent 的工具必须是创建者工具的子集；省略 `permissions` 时继承创建者模式。授予 `delegate_task` 还要求创建者已启用子 Agent。只有显式授予 `create_agent` 且允许写入，新 Agent 才能再创建其他永久 Agent。
+
+`list_agents({})` 返回工作区已有 Agent 的 ID、名称、工具白名单和权限模式，不返回模型配置或凭据。新 Bot 会在 TUI 下次刷新时出现在左侧，可以接收独立任务；创建本身不会提交任务。已有 ID、无权限或审批失效时不会写入。发生结果未知的崩溃时沿用 `needs_reconciliation`，不会自动重放创建。工具也适用于绑定 Bot 的传统 `chat` 会话；未绑定 Bot 的旧会话不提供管理工具。
+
+代码更新后，已运行的 worker 需要重启才能加载新工具；重启 TUI 本身不会停止旧 worker。
+
+## 清空 Agent 历史与删除 Agent
+
+```sh
+# 交互确认；加 --yes 可在脚本中显式确认
+hiro-agent kernel clear-history agent-manager -w /absolute/workspace
+hiro-agent kernel bot-delete code-writer -w /absolute/workspace
+
+# 补齐默认三个 Agent；已有配置和历史不覆盖
+hiro-agent kernel init-agents -w /absolute/workspace
+# 空工作区可指定模型配置，或使用 HIRO_MODEL 等环境变量
+hiro-agent kernel init-agents --config /path/to/model.json -w /absolute/workspace
+# 离线初始化
+hiro-agent kernel init-agents --mock -w /absolute/workspace
+```
+
+默认身份为 Hiro（`default`）、Agent 管理员（`agent-manager`）、代码编写员（`code-writer`）。新增身份优先继承已有 `default` 的模型与运行设置，其次使用管理员或其他已有 Agent；显式 `--config` 只影响这次新增的身份。初始化原子地创建缺失身份，不删除其他 Agent，不改变已存在默认身份的配置、权限或历史。
+
+`clear-history` 删除目标 Bot 的持久任务、Run、审批/提问、全部绑定的传统会话及子会话 JSONL、手工记忆和任务摘要，也清理相应交接与定时触发历史。身份、模型、角色指令、工具权限、技能启用设置和定时任务定义保留；未来定时执行仍可生成新任务。`bot-delete` 进一步移除身份、专属定时任务和技能设置。两者不删除项目文件、共享技能文档或其他 Bot 的任务和日志，共享任务链仍保留已经消耗的预算。
+
+清理命令默认要求确认，非交互脚本可加 `--yes`。执行中的任务、结果未知的待核对任务、打开的传统会话，以及相关其他 Bot 的未完成工作都会阻止清理；目标 Bot 尚未执行或等待答复的任务可随确认一并删除。TUI 中对应 `/clear`、`/delete-agent`、`/init-agents`。
+
+在线且空闲的新版 worker 支持清理，执行与清理通过维护锁协调。若仍运行更新前的 worker，命令会提示先重启 worker。文件删除采用暂存清单，SQL 提交决定恢复还是删除日志；异常退出若留下未完成清理，后续写入会被阻止，重新执行原清理命令（必要时加 `--yes`）完成恢复。稳定的锁文件会保留，不包含对话内容。
+
 ## 查询、审批、提问和取消
 
 ```sh
@@ -184,7 +236,44 @@ hiro-agent kernel routine-tick --max-triggers 10 -w /absolute/workspace
 
 原交互式 CLI、Session resume 和只读子 Agent 继续工作。顶层 `hiro-agent tasks --session SESSION_ID` 及 REPL `/tasks` 仍展示委派工具日志；持久 Task 队列使用 `hiro-agent kernel tasks`。observer 原 `task_id` 仍表示委派 call ID，持久身份使用独立 `persistent_task_id` 字段。
 
-记忆、文本 Skills 和 Routines 已接入上述持久 Task 入口；跨 Bot 交接属于后续 D 阶段，必须等待 R3 独立验收 PASS 后启动。
+记忆、文本 Skills、Routines 和跨 Bot 交接均接入持久 Task 入口，使用统一的预算与恢复流程。
+
+## Agent 直接通信
+
+持久任务中的 `send_message` / `read_message` 是真实的本地 Agent 消息接口，复用下述持久收件箱、任务投递和结果回传机制。`init-agents` 新建的标准 Agent 和新安装的管理员具备通信工具；管理员创建通信角色时应显式授予 `list_agents`、`send_message`、`read_message`。已有 Agent 配置不会因更新代码而扩权，可逐个开启：
+
+```sh
+hiro-agent kernel enable-communication agent-manager -w /absolute/workspace
+hiro-agent kernel enable-communication comm-test-sender -w /absolute/workspace
+hiro-agent kernel enable-communication comm-test-responder -w /absolute/workspace
+```
+
+该命令保留模型、角色指令、其他权限和历史，权限实际变化时递增版本。接收消息和自动回传最终回答不需要主动发送权限。修改后重启旧 worker，在 TUI 发送新任务；传统非持久聊天暂不提供消息工具。
+
+例如发送方调用 `send_message`：
+
+```json
+{
+  "target_agent_id": "comm-test-responder",
+  "correlation_id": "comm-001",
+  "payload": "COMM_TEST|id=comm-001|from=comm-test-sender|to=comm-test-responder|payload=ping",
+  "idempotency_key": "comm-001"
+}
+```
+
+工具返回稳定 `message_id`，只代表消息已持久接受。发送方结束当前发送阶段，不能占住单 worker 轮询等待。接收 Agent 获得消息正文及真实来源、目标和关联标识，实际执行后用最终回答回复，例如 `COMM_ACK|id=comm-001|from=comm-test-responder|to=comm-test-sender|payload=pong`；系统持久保存该回答并为发送方创建回复处理任务，无须手动中继或再次调用 `send_message` 回信。
+
+发送方在回复处理任务中调用 `read_message({"message_id": "MESSAGE_ID"})`，检查 `pending=false`、目标 Agent、`result.state` 及 `result.output` 中的标识、来源、目标和 `payload=pong`。顶层 `correlation_id` 来自原请求，不能单凭该字段判定对方已正确回显。回复缺失、失败或正文不匹配均不能报告通过。普通回复不会触发新一轮互发；主动继续通信仍消耗同一链预算与 hop 限额。消息可通过已有 `kernel handoffs`、`handoff-result` 命令检查。
+
+管理员 → 发送方 → 应答方等多层委派中，发送方的“已发送，等待回复”属于阶段答复。上游消息保持 pending，直到下游结果及发送方的回复核验任务完成，再回传最终报告。`result.response_task_ids` 指明最终报告来自哪些实际执行任务，`result.delegated_results` 包含获准沿委派链回传的下游收发证据。管理员读取自己发给发送方的原消息即可核验这些证据，不能直接读取发送方发件箱中的消息 ID。下游任务或核验任务失败、取消、耗尽预算时，上游收到失败结果；待核实的任务继续保持 pending。多个下游分支全部处理完毕才汇总回传。
+
+读取不存在或无权访问的消息时，`read_message` 返回 `status="unavailable"`、`error="message_not_accessible"`，不透露该消息信息，也不直接终止当前任务。Agent 应改读自己的原消息，或如实报告无法核验。已结束任务不能新增直接消息；重试已经接受的同幂等消息仍返回原消息。
+
+离线集成验证（模型为测试实现，工具、SQLite、worker 和跨重启投递为真实路径）：
+
+```sh
+.venv/bin/pytest -q tests/test_agent_communication.py tests/test_message_delegation.py
+```
 
 ## 双 Bot 收件箱、审阅与回传
 
