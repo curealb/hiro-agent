@@ -1,9 +1,11 @@
-"""Explicit configuration; credentials are read only by the model adapter."""
+"""JSON configuration and local environment defaults for application entry points."""
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Literal
 
+from dotenv import load_dotenv
 from pydantic import Field, ValidationError, field_validator
 
 from hiro_agent.contracts import DataModel
@@ -95,3 +97,28 @@ def load_config(path: Path | None = None) -> Config:
     except (OSError, ValidationError, json.JSONDecodeError) as exc:
         # Pydantic's original errors may include the supplied secrets.
         raise ConfigurationError("配置文件无法读取或字段不合法，请检查示例配置。") from exc
+
+
+def load_environment(workspace: Path | None = None) -> None:
+    """Load only explicit local files, preserving exported environment variables."""
+    directories = [workspace.resolve()] if workspace is not None else []
+    if Path.cwd() not in directories:
+        directories.append(Path.cwd())
+    for directory in directories:
+        path = directory / ".env"
+        try:
+            if path.is_file():
+                load_dotenv(path, override=False, encoding="utf-8-sig")
+        except (OSError, UnicodeError):
+            raise ConfigurationError(".env 无法读取，请检查文件权限和 UTF-8 编码。") from None
+
+
+def load_runtime_config(path: Path | None = None, *, workspace: Path | None = None) -> Config:
+    """Resolve shell > workspace .env > launch-directory .env > JSON/defaults."""
+    load_environment(workspace)
+    config = load_config(path)
+    if "HIRO_BASE_URL" in os.environ:
+        config.model.base_url = os.environ["HIRO_BASE_URL"]
+    if "HIRO_MODEL" in os.environ:
+        config.model.model = os.environ["HIRO_MODEL"]
+    return config

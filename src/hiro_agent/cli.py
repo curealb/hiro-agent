@@ -25,7 +25,7 @@ from rich.text import Text
 
 from hiro_agent.agent_communication import COMMUNICATION_TOOLS
 from hiro_agent.bootstrap import Harness, create_harness
-from hiro_agent.config import BotConfig, Config, load_config
+from hiro_agent.config import BotConfig, Config, load_runtime_config
 from hiro_agent.contracts import AgentService, RunResult
 from hiro_agent.errors import ConfigurationError, HiroError, RunCancelled
 from hiro_agent.kernel_cli import app as kernel_app
@@ -59,6 +59,7 @@ SLASH_COMMANDS = {
     "/continue": "继续未完成任务（新预算）",
     "/resume": "选择历史会话，或 /resume 会话ID",
     **NAVIGATION_COMMANDS,
+    "/init-agents": "补齐 Hiro、Agent 管理员、代码编写员",
     "/exit": "退出",
 }
 HELP = " · ".join(f"{command} {description}" for command, description in SLASH_COMMANDS.items())
@@ -453,6 +454,33 @@ async def chat_loop(
                 console.print(HELP, markup=False)
                 continue
             command, _, argument = text.partition(" ")
+            if command == "/init-agents":
+                try:
+                    if argument.strip():
+                        raise ConfigurationError("用法：/init-agents")
+                    from hiro_agent.agent_presets import initialize_agents
+                    from hiro_agent.kernel_runtime import KernelRuntime
+
+                    store = KernelRuntime(workspace).bots
+                    bound = next(
+                        (
+                            e.data["bot_id"]
+                            for e in harness.session.events
+                            if e.type == "session.bot"
+                        ),
+                        None,
+                    )
+                    source = store.get(bound).config if bound is not None else config
+                    initialized = initialize_agents(store, source)
+                    console.print(
+                        "初始化完成；已创建："
+                        + ("、".join(initialized["created"]) or "无")
+                        + "；已有 Agent 已保留。输入 /agent 查看或切换。",
+                        markup=False,
+                    )
+                except (HiroError, ValueError, OSError) as exc:
+                    console.print(str(exc), style="red", markup=False)
+                continue
             if command in NAVIGATION_COMMANDS:
                 try:
                     if command == "/chat" and not argument:
@@ -606,13 +634,14 @@ async def chat_loop(
     return None
 
 
-def configured(path: Path | None, *, mock: bool = False, subagents: bool = False) -> Config:
-    config = load_config(path)
-    # Routing overrides never raise tool permissions or inject process environment.
-    if "HIRO_BASE_URL" in os.environ:
-        config.model.base_url = os.environ["HIRO_BASE_URL"]
-    if "HIRO_MODEL" in os.environ:
-        config.model.model = os.environ["HIRO_MODEL"]
+def configured(
+    path: Path | None,
+    *,
+    workspace: Path | None = None,
+    mock: bool = False,
+    subagents: bool = False,
+) -> Config:
+    config = load_runtime_config(path, workspace=workspace)
     if mock:
         config.model.adapter = "mock"
     if subagents:
@@ -663,7 +692,7 @@ def prepare_tui_backend(
     from hiro_agent.tui_backend import TuiBackend
 
     backend = TuiBackend(workspace)
-    loaded = [configured(path, subagents=subagents) for path in configs or []]
+    loaded = [configured(path, workspace=workspace, subagents=subagents) for path in configs or []]
     if len(loaded) > 1 and any(config.bot is None for config in loaded):
         raise ConfigurationError("导入多个 Agent 时，每份配置都需要不同的 bot.id")
     for config in loaded:
@@ -680,7 +709,7 @@ def prepare_tui_backend(
                 config.bot.allowed_tools += ("delegate_task",)
             ensure_navigation_bot(backend, config)
     if not backend.kernel.bots.list():
-        ensure_navigation_bot(backend, configured(None, subagents=subagents))
+        ensure_navigation_bot(backend, configured(None, workspace=workspace, subagents=subagents))
     return backend
 
 
@@ -800,7 +829,7 @@ def launch(
     if sys.platform != "linux":
         raise typer.BadParameter("此版本仅支持 Linux")
     try:
-        config = configured(config_path, mock=mock, subagents=subagents)
+        config = configured(config_path, workspace=workspace, mock=mock, subagents=subagents)
         asyncio.run(
             _run_interfaces(
                 workspace,
@@ -918,7 +947,7 @@ def tui(
                 interface.select_bot(agent)
             await _run_interfaces(
                 workspace,
-                configured(None),
+                configured(None, workspace=workspace),
                 None,
                 interface=interface,
                 start_worker=start_worker,

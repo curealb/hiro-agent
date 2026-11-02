@@ -17,7 +17,7 @@ from hiro_agent.agent_communication import enable_communication
 from hiro_agent.agent_management import agent_summary, manager_config
 from hiro_agent.agent_presets import initialize_agents
 from hiro_agent.bot_lifecycle import clear_bot_history
-from hiro_agent.config import BudgetConfig, load_config
+from hiro_agent.config import BudgetConfig, load_config, load_environment
 from hiro_agent.errors import ConfigurationError, HiroError
 from hiro_agent.kernel_contracts import InteractionReply, TaskSubmission
 from hiro_agent.kernel_runtime import KernelRuntime
@@ -136,7 +136,11 @@ def init_agents(
         from hiro_agent.cli import configured
 
         store = KernelRuntime(workspace).bots
-        source = configured(config, mock=mock) if config or mock or not store.list() else None
+        source = (
+            configured(config, workspace=workspace, mock=mock)
+            if config or mock or not store.list()
+            else None
+        )
         return initialize_agents(store, source)
 
     _command(apply)
@@ -471,6 +475,7 @@ async def serve_worker(
     context_max_chars: int = 64_000,
     context_max_messages: int = 64,
 ) -> None:
+    load_environment(workspace)
     kernel = (
         KernelRuntime(workspace)
         if (context_max_chars, context_max_messages) == (64_000, 64)

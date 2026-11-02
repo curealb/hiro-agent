@@ -17,7 +17,7 @@ from uuid import uuid4
 
 from hiro_agent.agent_presets import initialize_agents
 from hiro_agent.bot_lifecycle import clear_bot_history
-from hiro_agent.config import Config
+from hiro_agent.config import load_environment, load_runtime_config
 from hiro_agent.contracts import AssistantMessage, SessionEvent, ToolCall, ToolResult
 from hiro_agent.errors import ConfigurationError, PersistenceError
 from hiro_agent.kernel_contracts import (
@@ -96,6 +96,7 @@ class TuiBackend:
 
     def __init__(self, workspace: Path, *, kernel: KernelRuntime | None = None) -> None:
         self.workspace = workspace.resolve(strict=True)
+        load_environment(self.workspace)
         self.kernel = kernel if kernel is not None else KernelRuntime(self.workspace)
         if self.kernel.workspace != self.workspace:
             raise ConfigurationError("TUI 与内核必须使用相同工作区")
@@ -323,11 +324,7 @@ class TuiBackend:
     def initialize_agents(self) -> dict[str, list[str]]:
         source = None
         if not self.kernel.bots.list():
-            source = Config()
-            if "HIRO_MODEL" in os.environ:
-                source.model.model = os.environ["HIRO_MODEL"]
-            if "HIRO_BASE_URL" in os.environ:
-                source.model.base_url = os.environ["HIRO_BASE_URL"]
+            source = load_runtime_config(workspace=self.workspace)
         return initialize_agents(self.kernel.bots, source)
 
     def reply(self, bot_id: str, interaction_id: str, reply: InteractionReply) -> InteractionRecord:

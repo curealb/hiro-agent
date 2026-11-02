@@ -11,7 +11,7 @@ hiro-agent tui -w /path/to/project --config writer.json --config reviewer.json -
 hiro-agent chat --workspace /path/to/project
 ```
 
-工作区需要已经存在。首次打开没有 Bot 的工作区时，程序会创建稳定 ID 为 `default` 的 Agent，沿用旧配置、`HIRO_MODEL` / `HIRO_BASE_URL`、工具权限及 `--subagents` 设置。已有 Bot 的工作区直接使用保存的配置和权限，不会因启动时的默认值或环境变量自动覆盖。
+工作区需要已经存在。在启动目录或工作区的 `.env` 中填写 `HIRO_API_KEY`、`HIRO_BASE_URL`、`HIRO_MODEL` 后即可启动，无需手动编辑 JSON。已导出的环境变量优先，其次工作区 `.env`，再其次启动目录 `.env`。首次打开没有 Bot 的工作区时，程序会创建稳定 ID 为 `default` 的 Agent，沿用旧配置、`HIRO_MODEL` / `HIRO_BASE_URL`、工具权限及 `--subagents` 设置。已有 Bot 的工作区直接使用保存的配置和权限，不会因启动时的默认值或环境变量自动覆盖。
 
 `tui --config` 可重复指定；多个配置均需有稳定的 `bot.id`。单个不含 `bot` 的旧配置可导入为 `default`。也可在界面中按 `F7` 或点击「导入 Agent」读取带 `bot.id` 的配置文件。显式导入相同 ID 按已有 BotStore 规则更新配置与权限版本，切换 Agent 本身不会更改配置。
 
@@ -109,7 +109,7 @@ TUI 显示持久 Task 的汇总，传统聊天显示对应 Session 的历史，�
 
 清空或删除会丢弃尚未执行、正在等审批或答复的本 Agent 任务；若有正在执行、结果待核对、仍被其他传统聊天占用的会话，或有关联的其他 Agent 未完成任务，操作会拒绝执行并说明原因。先结束相应任务或关闭占用会话，再重试。在线但空闲的新版 worker 可以正常配合清理。项目文件与共享技能文件不属于聊天历史，不会被删除；清空保留定时任务定义，删除 Agent 则移除这些定义。
 
-初始化从已有 Hiro 优先继承模型设置。工作区已没有任何 Agent 时，使用 `HIRO_MODEL`、`HIRO_BASE_URL` 等环境配置；也可在终端使用 `kernel init-agents --config /path/to/model.json -w /path/to/project` 指定模型配置。清理、删除和初始化同样提供终端命令，见[内核指南](kernel/USAGE.md#清空-agent-历史与删除-agent)。
+初始化从已有 Hiro 优先继承模型设置。工作区已没有任何 Agent 时，使用 `.env` 中的 `HIRO_MODEL`、`HIRO_BASE_URL` 等环境配置；也可在终端使用 `kernel init-agents --config /path/to/model.json -w /path/to/project` 指定模型配置。新建配置保存到 `.hiro-agent/kernel.sqlite3`，密钥由环境提供；传统聊天也支持 `/init-agents`。清理、删除和初始化同样提供终端命令，见[内核指南](kernel/USAGE.md#清空-agent-历史与删除-agent)。
 
 ## 后台任务和恢复
 

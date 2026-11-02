@@ -25,7 +25,7 @@ B3/C4/D 集成说明。命令从项目的 `hiro-agent` 入口运行，也可使�
 }
 ```
 
-凭据由 worker 的环境变量 `HIRO_API_KEY` 提供，不写入 SQLite。离线检查可使用 `"model": {"adapter": "mock"}`；内置 mock 面向原有简单演示，集成测试使用注入的确定性模型验证审批/提问，不需要网络。
+凭据由 worker 的环境变量 `HIRO_API_KEY` 提供，不写入 SQLite。worker 会自动加载工作区和启动目录的 `.env`，已导出的环境变量优先，工作区 `.env` 优先于启动目录 `.env`。离线检查可使用 `"model": {"adapter": "mock"}`；内置 mock 面向原有简单演示，集成测试使用注入的确定性模型验证审批/提问，不需要网络。
 
 ```sh
 hiro-agent kernel bot-save bot.json -w /absolute/workspace
@@ -90,7 +90,8 @@ hiro-agent kernel bot-delete code-writer -w /absolute/workspace
 
 # 补齐默认三个 Agent；已有配置和历史不覆盖
 hiro-agent kernel init-agents -w /absolute/workspace
-# 空工作区可指定模型配置，或使用 HIRO_MODEL 等环境变量
+# 空工作区可在 .env 填写 HIRO_API_KEY、HIRO_BASE_URL、HIRO_MODEL，无需 JSON
+# 也可显式指定模型配置
 hiro-agent kernel init-agents --config /path/to/model.json -w /absolute/workspace
 # 离线初始化
 hiro-agent kernel init-agents --mock -w /absolute/workspace

@@ -170,12 +170,15 @@ class CompatibleModel:
     def __init__(self, config: ModelConfig, client: httpx.AsyncClient | None = None) -> None:
         self._url = _endpoint(config.base_url)
         if not config.model.strip():
-            raise ConfigurationError("请在配置中填写模型名称。")
+            raise ConfigurationError("请在 .env 中填写 HIRO_MODEL，或在配置中填写模型名称。")
         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", config.api_key_env):
             raise ConfigurationError("api_key_env 必须是合法的环境变量名称。")
         api_key = os.environ.get(config.api_key_env, "").strip()
         if not api_key:
-            raise ConfigurationError("请通过 api_key_env 指定的环境变量设置 API 密钥。")
+            raise ConfigurationError(
+                "请在 .env 或环境变量中设置 API 密钥（默认 HIRO_API_KEY，"
+                "自定义配置使用 api_key_env）。"
+            )
         if not api_key.isascii() or any(ord(char) < 32 or ord(char) == 127 for char in api_key):
             raise ConfigurationError("API 密钥的格式不合法。")
         if _RESERVED_BODY_FIELDS.intersection(config.extra_body):

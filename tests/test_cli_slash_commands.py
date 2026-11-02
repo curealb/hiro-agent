@@ -106,7 +106,7 @@ async def keyboard(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Keyboard]:
 
 async def test_slash_opens_described_menu_and_prefix_filters(keyboard: Keyboard) -> None:
     task = await keyboard.start()
-    await keyboard.send("/", lambda: len(keyboard.choices) == 8)
+    await keyboard.send("/", lambda: len(keyboard.choices) == 9)
     assert keyboard.choices == [
         "/help",
         "/tasks",
@@ -115,6 +115,7 @@ async def test_slash_opens_described_menu_and_prefix_filters(keyboard: Keyboard)
         "/agent",
         "/tui",
         "/chat",
+        "/init-agents",
         "/exit",
     ]
     state = keyboard.prompt.default_buffer.complete_state
@@ -138,6 +139,7 @@ async def test_slash_opens_described_menu_and_prefix_filters(keyboard: Keyboard)
         ("\x1b[B" * 4, "/agent"),
         ("\x1b[B" * 5, "/tui"),
         ("\x1b[B" * 6, "/chat"),
+        ("\x1b[B" * 7, "/init-agents"),
         ("\x1b[A", "/exit"),
     ],
 )
@@ -145,14 +147,14 @@ async def test_selection_submits_with_one_enter(
     keyboard: Keyboard, keys: str, command: str
 ) -> None:
     task = await keyboard.start()
-    await keyboard.send("/", lambda: len(keyboard.choices) == 8)
+    await keyboard.send("/", lambda: len(keyboard.choices) == 9)
     keyboard.pipe.send_text(keys + "\r")
     assert await asyncio.wait_for(task, 2) == command
 
 
 async def test_selection_preserves_filter_and_typing_resets_highlight(keyboard: Keyboard) -> None:
     task = await keyboard.start()
-    await keyboard.send("/", lambda: len(keyboard.choices) == 8)
+    await keyboard.send("/", lambda: len(keyboard.choices) == 9)
     await keyboard.send("\x1b[B", lambda: keyboard.terminal._interface.selected_index == 1)
     assert keyboard.prompt.default_buffer.text == "/"
     assert keyboard.choices == [
@@ -163,6 +165,7 @@ async def test_selection_preserves_filter_and_typing_resets_highlight(keyboard: 
         "/agent",
         "/tui",
         "/chat",
+        "/init-agents",
         "/exit",
     ]
 
@@ -175,7 +178,7 @@ async def test_selection_preserves_filter_and_typing_resets_highlight(keyboard: 
 
 async def test_tab_completes_selected_command_without_submitting(keyboard: Keyboard) -> None:
     task = await keyboard.start()
-    await keyboard.send("/", lambda: len(keyboard.choices) == 8)
+    await keyboard.send("/", lambda: len(keyboard.choices) == 9)
     await keyboard.send("\x1b[B\t", lambda: keyboard.prompt.default_buffer.text == "/tasks")
     assert not task.done()
     keyboard.pipe.send_text("\r")
@@ -199,7 +202,7 @@ async def test_agent_name_prefix_completes_id_without_submitting(keyboard: Keybo
 async def test_slash_menu_shows_agent_names_and_uses_id_internally(keyboard: Keyboard) -> None:
     keyboard.terminal.agent_choices = [("alpha", "代码编写员"), ("beta", "通信测试发送方")]
     task = await keyboard.start()
-    await keyboard.send("/", lambda: len(keyboard.choices) == 10)
+    await keyboard.send("/", lambda: len(keyboard.choices) == 11)
     assert keyboard.choices[:2] == ["/alpha ", "/beta "]
     assert any("通信测试发送方" in line for line in keyboard.screen_lines)
     await keyboard.send("发送", lambda: keyboard.choices == ["/beta "])
@@ -222,7 +225,7 @@ async def test_traditional_menu_completes_second_target_and_keeps_first(keyboard
 
 async def test_escape_dismisses_menu_and_further_typing_reopens_it(keyboard: Keyboard) -> None:
     task = await keyboard.start()
-    await keyboard.send("/", lambda: len(keyboard.choices) == 8)
+    await keyboard.send("/", lambda: len(keyboard.choices) == 9)
     await keyboard.send("\x1b", lambda: not keyboard.choices)
     assert keyboard.prompt.default_buffer.text == "/"
 
@@ -240,7 +243,7 @@ async def test_ctrl_c_discards_menu_and_next_prompt_is_empty(keyboard: Keyboard)
         keyboard.tasks.append(asyncio.create_task(read_until_interrupted()))
 
     await keyboard.rendered(begin, lambda: keyboard.prompt.app.is_running)
-    await keyboard.send("/", lambda: len(keyboard.choices) == 8)
+    await keyboard.send("/", lambda: len(keyboard.choices) == 9)
     keyboard.pipe.send_text("\x03")
     await asyncio.wait_for(keyboard.tasks[-1], 2)
 
@@ -265,7 +268,7 @@ async def test_ctrl_r_searches_history_and_returns_to_composer(keyboard: Keyboar
     assert await asyncio.wait_for(previous, 2) == "review parser"
 
     task = await keyboard.start()
-    await keyboard.send("/", lambda: len(keyboard.choices) == 8)
+    await keyboard.send("/", lambda: len(keyboard.choices) == 9)
     await keyboard.send(
         "\x12parser",
         lambda: (
@@ -293,7 +296,7 @@ async def test_menu_renders_above_composer_with_full_width_selected_row(
 ) -> None:
     keyboard.output.columns = columns
     await keyboard.start()
-    await keyboard.send("/", lambda: len(keyboard.choices) == 8)
+    await keyboard.send("/", lambda: len(keyboard.choices) == 9)
     screen = keyboard.screen
     menu_rows = [
         y
@@ -315,7 +318,7 @@ async def test_menu_renders_above_composer_with_full_width_selected_row(
         for y in range(screen.height)
         if any("class:composer" in screen.data_buffer[y][x].style.split() for x in range(columns))
     ]
-    assert len(menu_rows) == 8
+    assert len(menu_rows) == 8  # The menu scrolls when there are more than eight commands.
     assert len(composer_background_rows) == 3
     assert composer_rows and footer_rows
     assert max(menu_rows) < min(composer_rows) < min(footer_rows)
@@ -367,7 +370,7 @@ async def test_prompt_reuse_disables_menu_during_approval_then_restores_it(
     keyboard: Keyboard,
 ) -> None:
     normal = await keyboard.start()
-    await keyboard.send("/", lambda: len(keyboard.choices) == 8)
+    await keyboard.send("/", lambda: len(keyboard.choices) == 9)
     keyboard.pipe.send_text("\t\r")
     assert await asyncio.wait_for(normal, 2) == "/help"
 

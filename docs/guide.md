@@ -91,16 +91,19 @@ uv run hiro-agent chat --config configs/mock-subagents.json --resume SESSION_ID 
 
 ## 真实模型
 
-选择支持 Chat Completions 文本与 function tools 的模型，设置环境变量后启动：
+选择支持 Chat Completions 文本与 function tools 的模型，在启动目录或目标工作区创建 `.env` 后启动：
 
 ```bash
-export HIRO_BASE_URL='https://your-provider.example/v1'
-export HIRO_MODEL='your-tool-calling-model'
-export HIRO_API_KEY='your-key'
+# .env 中填写以下三项（无需 export）
+# HIRO_API_KEY=your-key
+# HIRO_BASE_URL=https://your-provider.example/v1
+# HIRO_MODEL=your-tool-calling-model
 uv run hiro-agent --workspace /path/to/your/project
 ```
 
-接口地址在 `base_url` 后追加 `/chat/completions`；不需要把完整 endpoint 放进 `HIRO_BASE_URL`。本地无鉴权兼容服务也需要设置一个占位 API Key。程序不自动读取 `.env`，参考 `.env.example` 将变量导出到当前 shell。
+接口地址在 `base_url` 后追加 `/chat/completions`；不需要把完整 endpoint 放进 `HIRO_BASE_URL`。本地无鉴权兼容服务也需要设置一个占位 API Key。程序自动读取 `.env`，参考仓库中的 `.env.example`。优先级为已导出的环境变量 > 工作区 `.env` > 启动目录 `.env` > JSON 配置/默认值，不向上搜索父目录。独立 worker 也会加载这两个位置，密钥只保存在环境中。
+
+在全屏 TUI 或传统聊天中输入 `/init-agents` 即可补齐 Hiro、Agent 管理员和代码编写员，配置持久保存在 `.hiro-agent/kernel.sqlite3`，无需手动编辑 JSON。已有身份及其配置和历史保持不变；新身份继承已有 Hiro（传统聊天中继承当前会话）的模型设置。修改 `.env` 后需重启进程；如要更新已保存的 Agent 模型路由，请显式导入修改后的 JSON 配置。
 
 `configs/baseline.json` 展示全部配置。CLI 的 `--mock` 优先选择 Mock；`HIRO_BASE_URL`、`HIRO_MODEL` 覆盖配置中的对应路由，密钥从 `api_key_env` 指定的环境变量读取。没有模型名称或密钥时会明确报错。
 

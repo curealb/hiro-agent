@@ -80,17 +80,18 @@ uv run hiro-agent --mock --workspace /tmp/hiro-demo
 
 ### 接入真实模型
 
-选择支持 Chat Completions 文本和 function tools 的服务，在当前 shell 导出配置：
+选择支持 Chat Completions 文本和 function tools 的服务，复制示例配置：
 
 ```bash
-export HIRO_BASE_URL='https://your-provider.example/v1'
-export HIRO_MODEL='your-tool-calling-model'
-export HIRO_API_KEY='your-key'
+cp .env.example .env
+# 编辑 .env，填写 HIRO_API_KEY、HIRO_BASE_URL、HIRO_MODEL
 
 uv run hiro-agent --workspace /path/to/your/project
 ```
 
-`HIRO_BASE_URL` 填服务的 API 基址，程序会追加 `/chat/completions`。程序不会自动加载 `.env`，变量示例见 [.env.example](.env.example)。本地无鉴权服务也需要设置占位 API Key。
+`HIRO_BASE_URL` 填服务的 API 基址，程序会追加 `/chat/completions`。启动时自动加载目标工作区和启动目录的 `.env`；同名变量的优先级为：已导出的环境变量 > 工作区 `.env` > 启动目录 `.env` > JSON 配置/默认值。本地无鉴权服务也需要设置占位 API Key。
+
+进入会话后输入 `/init-agents`，自动补齐 Hiro、Agent 管理员和代码编写员，并保存各自配置到工作区 `.hiro-agent/kernel.sqlite3`。新 Agent 继承当前模型配置；重复执行只补缺失身份，保留已有配置与历史。默认全屏 TUI 和传统 `chat` 都支持此命令，无需手动编辑 JSON。独立 worker 也会自动读取 `.env`，密钥不写入 Agent 配置或数据库。
 
 使用 JSON 配置启动：
 
@@ -146,6 +147,7 @@ uv run hiro-agent tui -w /path/to/your/project -c writer.json -c reviewer.json -
 | ------------------- | --------------------------- |
 | 普通任务描述              | 在当前 Session 创建新 Run         |
 | `/help`             | 显示帮助                        |
+| `/init-agents`      | 补齐三个默认 Agent，并保存模型和角色配置 |
 | `/continue`         | 继续最近未完成的任务，使用新 Run 和新预算     |
 | `/tasks`            | 查看当前 Session 最近一个 Run 的委派任务 |
 | `/resume`           | 选择历史会话；也可用 `/resume SESSION_ID` 直接切换 |
