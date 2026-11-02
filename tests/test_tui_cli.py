@@ -18,6 +18,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from rich.text import Text
 from typer.testing import CliRunner
 
 from hiro_agent import cli
@@ -60,16 +61,19 @@ def save_config(directory: Path, bot_id: str) -> Path:
     return path
 
 
-def test_tui_help_is_available_without_terminal_or_database(tmp_path: Path) -> None:
+@pytest.mark.parametrize("color", [False, True])
+def test_tui_help_is_available_without_terminal_or_database(tmp_path: Path, color: bool) -> None:
     runner = CliRunner()
-    root_help = runner.invoke(cli.app, ["--help"], terminal_width=160)
-    assert root_help.exit_code == 0 and "tui" in root_help.output
+    root_help = runner.invoke(cli.app, ["--help"], terminal_width=160, color=color)
+    assert root_help.exit_code == 0 and "tui" in Text.from_ansi(root_help.output).plain
     help_result = runner.invoke(
-        cli.app, ["--workspace", str(tmp_path), "tui", "--help"], terminal_width=160
+        cli.app, ["--workspace", str(tmp_path), "tui", "--help"], terminal_width=160, color=color
     )
     assert help_result.exit_code == 0, help_result.output
+    # Rich can insert ANSI styles between the dashes and option name in CI.
+    help_text = Text.from_ansi(help_result.output).plain
     for option in ("--config", "--agent", "--demo", "--no-start-worker"):
-        assert option in help_result.output
+        assert option in help_text
     assert list(tmp_path.iterdir()) == []
 
 
