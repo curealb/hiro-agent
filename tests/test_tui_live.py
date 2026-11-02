@@ -181,7 +181,22 @@ async def test_real_worker_streams_without_enter_and_settles_preview_once(
                 model.finish.set()
             assert await asyncio.wait_for(execution, 3)
             await wait_screen(terminal, lambda: "生成中" not in terminal.screen)
-            assert terminal.screen.count("FIRST_CHUNK") == 1
+            if outcome == "success":
+                # Wait for the sidebar's separate refresh so this also covers
+                # the frame where the response appears in both panes.
+                await wait_screen(
+                    terminal,
+                    lambda: any(
+                        "FIRST_CHUNK" in line.partition("│")[0]
+                        for line in terminal.screen.splitlines()
+                    ),
+                )
+            # The sidebar also shows the latest response as an Agent preview.
+            conversation_screen = "\n".join(
+                line.partition("│")[2] for line in terminal.screen.splitlines()
+            )
+            assert conversation_screen.count("FIRST_CHUNK") == 1
+            assert conversation_screen.count("SECOND_CHUNK") == 1
             if outcome == "success":
                 assert "未完成" not in terminal.screen
                 assert "Token 15" in terminal.screen
