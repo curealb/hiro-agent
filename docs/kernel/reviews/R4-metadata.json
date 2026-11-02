@@ -1,0 +1,23 @@
+{
+  "baseline_git_revision": "81f42f90b932e61151f399d423fa9a45e55a97e7",
+  "utc": "2026-11-01T18:47:11.064807+00:00",
+  "file_count": 92,
+  "scope": "all source and tests, pyproject, lockfile, README, R4 packet and requirements/contracts",
+  "initial_fixture_corrections": [
+    "reconcile replay begins with reconcile instead of unrelated finish",
+    "ToolResult value field and durable approval id retained before terminal clears Task interaction",
+    "renamed R4 test_process_acceptance.py to test_r4_process_acceptance.py to avoid pre-existing R2 pytest module collision; no content change"
+  ],
+  "environment": {
+    "python": "3.12.12",
+    "pytest": "9.1.1",
+    "pytest_asyncio": "1.4.0",
+    "execution": "approved local-only unsandboxed pytest to avoid documented asyncio shutdown limitation",
+    "build": "BASELINE cached hatchling, offline no-build-isolation"
+  },
+  "reviewer_edits": "only tests/acceptance_r4 and docs/kernel/reviews/R4*",
+  "completed_utc": "2026-11-01T18:54:05.786047+00:00",
+  "decision": "PASS",
+  "independent_tests": 17,
+  "full_tests": 832
+}

@@ -1,0 +1,56 @@
+[
+  {
+    "name": "ruff",
+    "command": [
+      ".venv/bin/ruff",
+      "check",
+      "."
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "format",
+    "command": [
+      ".venv/bin/ruff",
+      "format",
+      "--check",
+      "."
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "mypy",
+    "command": [
+      ".venv/bin/mypy",
+      "src"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "diff-check",
+    "command": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "module-tests",
+    "command": "PYTHONDONTWRITEBYTECODE=1 timeout 90s .venv/bin/pytest -q -p no:cacheprovider tests/test_handoffs.py tests/test_handoff_pipeline.py tests/test_handoff_cli.py",
+    "exit_code": 0,
+    "result": "16 passed in 10.08s"
+  },
+  {
+    "name": "pytest",
+    "command": "PYTHONDONTWRITEBYTECODE=1 timeout 300s .venv/bin/pytest -q -p no:cacheprovider",
+    "exit_code": 0,
+    "result": "815 passed in 149.24s (0:02:29)"
+  },
+  {
+    "name": "build",
+    "command": "BASELINE cached backend PYTHONPATH; PYTHONDONTWRITEBYTECODE=1 UV_CACHE_DIR=/tmp/hiro-agent-uv-cache uv build --offline --no-build-isolation --out-dir /tmp/hiro-agent-d-dist",
+    "exit_code": 0,
+    "result": "wheel and sdist created"
+  }
+]

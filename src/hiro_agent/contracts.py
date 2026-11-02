@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from hiro_agent.errors import PersistenceError, RunCancelled
 
 if TYPE_CHECKING:
+    from hiro_agent.bots import AuthorityProvider
     from hiro_agent.budget import Budget
 
 
@@ -204,6 +205,8 @@ class RunScope:
     parent_run_id: str | None = None
     role: str = "main"
     call_id: str | None = None
+    persistent_task_id: str | None = None
+    prepare: Callable[[], Awaitable[None]] | None = None
 
 
 @dataclass(frozen=True)
@@ -213,6 +216,7 @@ class ToolExecutionContext:
     call_id: str
     budget: Budget
     cancellation: Cancellation
+    authority: AuthorityProvider | None = None
 
 
 class ModelService(Protocol):

@@ -1,0 +1,37 @@
+[
+  {
+    "name": "diff-check",
+    "command": "git diff --check",
+    "exit_code": 0,
+    "duration_seconds": 0.006,
+    "output": ""
+  },
+  {
+    "name": "ruff",
+    "command": "RUFF_CACHE_DIR=/tmp/hiro-agent-r3-ruff .venv/bin/ruff check .",
+    "exit_code": 0,
+    "duration_seconds": 0.026,
+    "output": "All checks passed!"
+  },
+  {
+    "name": "format",
+    "command": "RUFF_CACHE_DIR=/tmp/hiro-agent-r3-ruff .venv/bin/ruff format --check .",
+    "exit_code": 0,
+    "duration_seconds": 0.027,
+    "output": "109 files already formatted"
+  },
+  {
+    "name": "build",
+    "command": "PYTHONPATH=/home/curealb/.cache/uv/archive-v0/bgLrS0yUwJ8cuofD_HC9j:/home/curealb/.cache/uv/archive-v0/rV7UoyfERUwgy4LcpvHxy:/home/curealb/.cache/uv/archive-v0/Je5sA6EHFWgYlJlNS49Vc:/home/curealb/.cache/uv/archive-v0/Xr0rqq8-K2XtfoB7jWRNG:/home/curealb/.cache/uv/archive-v0/poTN_HFt5dAAQnuvxZwQv:/home/curealb/.cache/uv/archive-v0/E_BRBr-VAGOkDwa8JEmdX PYTHONDONTWRITEBYTECODE=1 UV_CACHE_DIR=/tmp/hiro-agent-uv-cache uv build --offline --no-build-isolation --out-dir /tmp/hiro-agent-r3-initial-dist",
+    "exit_code": 0,
+    "duration_seconds": 0.438,
+    "output": "Building source distribution...\nBuilding wheel from source distribution...\nSuccessfully built /tmp/hiro-agent-r3-initial-dist/hiro_agent-0.1.0.tar.gz\nSuccessfully built /tmp/hiro-agent-r3-initial-dist/hiro_agent-0.1.0-py3-none-any.whl"
+  },
+  {
+    "name": "mypy",
+    "command": "MYPY_CACHE_DIR=/tmp/hiro-agent-r3-mypy .venv/bin/mypy src",
+    "exit_code": 0,
+    "duration_seconds": 2.897,
+    "output": "Success: no issues found in 34 source files"
+  }
+]

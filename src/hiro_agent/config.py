@@ -60,12 +60,31 @@ class SubagentsConfig(DataModel):
     roles: SubagentRolesConfig = Field(default_factory=SubagentRolesConfig)
 
 
+class BotConfig(DataModel):
+    """An explicit identity; reading the same config never invents a new Bot."""
+
+    id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
+    name: str = Field(default="Bot", min_length=1, max_length=200)
+    instructions: str = ""
+    allowed_tools: tuple[str, ...] = ("list_files", "read_file", "search_text")
+
+    @field_validator("allowed_tools")
+    @classmethod
+    def normalize_tools(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if any(
+            not name or not name.isascii() or not name.replace("_", "").isalnum() for name in value
+        ):
+            raise ValueError("Tool names must be nonempty ASCII identifiers")
+        return tuple(sorted(set(value)))
+
+
 class Config(DataModel):
     model: ModelConfig = Field(default_factory=ModelConfig)
     budget: BudgetConfig = Field(default_factory=BudgetConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
     subagents: SubagentsConfig = Field(default_factory=SubagentsConfig)
     permissions: Literal["ask-write", "read-only"] = "ask-write"
+    bot: BotConfig | None = None
 
 
 def load_config(path: Path | None = None) -> Config:

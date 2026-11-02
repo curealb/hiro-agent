@@ -1,0 +1,26 @@
+{
+  "base_revision": "81f42f90b932e61151f399d423fa9a45e55a97e7",
+  "source_count": 34,
+  "pre_acceptance_test_files": 41,
+  "date": "2026-11-02",
+  "reviewer": "fresh R3 reviewer",
+  "manifest_sha256": "47f24261e419c0c864dc01c1e021ac7fdbedb020e154cd4e50f8182119c10dbf",
+  "source_manifest_sha256": "81d92e98a238e17a894ee0073533a803f4a11a5450f05f4fb5e2b33ed6c006b4",
+  "reviewed_test_files": 44,
+  "acceptance_tests": 10,
+  "production_edits_by_reviewer": false,
+  "initial_decision": "FAIL",
+  "initial_full_pytest": {
+    "exit_code": 1,
+    "failed": 1,
+    "passed": 797
+  },
+  "final_decision": "PASS",
+  "final_manifest_sha256": "947df5cb0697183b4df3c04fce251cee83ebacf2b5986d8806597e0f7b8be2e0",
+  "final_source_manifest_sha256": "90d5f3c15ae9f0738318449348982d6894676ec003926d95dc31bcf64bbeacc9",
+  "final_full_pytest": {
+    "exit_code": 0,
+    "passed": 799
+  },
+  "acceptance_tests_unchanged": true
+}

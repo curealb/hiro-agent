@@ -1,0 +1,65 @@
+[
+  {
+    "name": "independent-acceptance",
+    "command": "PYTHONDONTWRITEBYTECODE=1 timeout 300s .venv/bin/pytest -vv -x -p no:cacheprovider tests/acceptance_r4 --basetemp=/tmp/hiro-agent-r4-initial3",
+    "exit_code": 0,
+    "result": "17 passed in 72.15s",
+    "log": "R4-initial3-acceptance.log"
+  },
+  {
+    "name": "D-module-tests",
+    "command": "PYTHONDONTWRITEBYTECODE=1 timeout 120s .venv/bin/pytest -q -p no:cacheprovider tests/test_handoffs.py tests/test_handoff_pipeline.py tests/test_handoff_cli.py",
+    "exit_code": 0,
+    "result": "16 passed in 11.10s",
+    "log": "R4-module-tests.log"
+  },
+  {
+    "name": "ruff",
+    "command": "RUFF_CACHE_DIR=/tmp/hiro-agent-r4-ruff-cache .venv/bin/ruff check .",
+    "exit_code": 0,
+    "result": "All checks passed!",
+    "log": "R4-ruff.log"
+  },
+  {
+    "name": "format",
+    "command": "RUFF_CACHE_DIR=/tmp/hiro-agent-r4-ruff-cache .venv/bin/ruff format --check .",
+    "exit_code": 0,
+    "result": "120 files already formatted",
+    "log": "R4-format.log"
+  },
+  {
+    "name": "mypy",
+    "command": "MYPY_CACHE_DIR=/tmp/hiro-agent-r4-mypy-cache .venv/bin/mypy src",
+    "exit_code": 0,
+    "result": "Success: no issues found in 36 source files",
+    "log": "R4-mypy.log"
+  },
+  {
+    "name": "diff-check",
+    "command": "git diff --check",
+    "exit_code": 0,
+    "result": "no whitespace errors",
+    "log": "R4-diff-check.log"
+  },
+  {
+    "name": "build",
+    "command": "PYTHONPATH=/home/curealb/.cache/uv/archive-v0/bgLrS0yUwJ8cuofD_HC9j:/home/curealb/.cache/uv/archive-v0/rV7UoyfERUwgy4LcpvHxy:/home/curealb/.cache/uv/archive-v0/Je5sA6EHFWgYlJlNS49Vc:/home/curealb/.cache/uv/archive-v0/Xr0rqq8-K2XtfoB7jWRNG:/home/curealb/.cache/uv/archive-v0/poTN_HFt5dAAQnuvxZwQv:/home/curealb/.cache/uv/archive-v0/E_BRBr-VAGOkDwa8JEmdX PYTHONDONTWRITEBYTECODE=1 UV_CACHE_DIR=/tmp/hiro-agent-uv-cache uv build --offline --no-build-isolation --out-dir /tmp/hiro-agent-r4-dist",
+    "exit_code": 0,
+    "result": "wheel and sdist successfully built; all 36 production modules verified byte-for-byte",
+    "log": "R4-build.log"
+  },
+  {
+    "name": "hash-verification",
+    "command": "sha256sum --check docs/kernel/reviews/R4-manifest.sha256",
+    "exit_code": 0,
+    "result": "all 92 files match",
+    "log": "R4-hash-verification.log"
+  },
+  {
+    "name": "full-pytest",
+    "command": "PYTHONDONTWRITEBYTECODE=1 timeout 420s .venv/bin/pytest -q -p no:cacheprovider",
+    "exit_code": 0,
+    "result": "832 passed in 218.82s (0:03:38)",
+    "log": "R4-pytest.log"
+  }
+]

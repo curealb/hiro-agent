@@ -1,0 +1,26 @@
+[
+  {
+    "command": "PYTHONDONTWRITEBYTECODE=1 timeout 300s .venv/bin/pytest -vv -x -p no:cacheprovider tests/acceptance_r4 --basetemp=/tmp/hiro-agent-r4-initial",
+    "exit_code": 1,
+    "log": "R4-initial-acceptance.log",
+    "classification": "reviewer fixture: reconcile must replay existing evidence; changed fixture settlement to reconcile"
+  },
+  {
+    "command": "PYTHONDONTWRITEBYTECODE=1 timeout 300s .venv/bin/pytest -vv -x -p no:cacheprovider tests/acceptance_r4 --basetemp=/tmp/hiro-agent-r4-initial2",
+    "exit_code": 1,
+    "log": "R4-initial2-acceptance.log",
+    "classification": "reviewer model fixture incorrectly read ToolResult.output; corrected to existing value API and retained approval id before terminal clears it"
+  },
+  {
+    "command": "PYTHONDONTWRITEBYTECODE=1 timeout 300s .venv/bin/pytest -vv -x -p no:cacheprovider tests/acceptance_r4 --basetemp=/tmp/hiro-agent-r4-initial3",
+    "exit_code": 0,
+    "log": "R4-initial3-acceptance.log",
+    "classification": "17 passed"
+  },
+  {
+    "command": "PYTHONDONTWRITEBYTECODE=1 timeout 420s .venv/bin/pytest -q -p no:cacheprovider",
+    "exit_code": 2,
+    "log": "R4-initial-pytest-collection.log",
+    "classification": "reviewer test module basename collided with existing R2 module; renamed only R4 file, then restarted full command"
+  }
+]

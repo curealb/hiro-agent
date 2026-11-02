@@ -1,0 +1,12 @@
+[
+  {
+    "file": "src/hiro_agent/kernel_runtime.py",
+    "initial": "f8131b64006740dbc327f5628768deaa6214ccb4b4fe6af480e9e3225dd13ee0",
+    "current": "c890e32a9aec9ffb6765126db875c0a2384c927af799b89eb3a3fac857e792d6"
+  },
+  {
+    "file": "tests/test_kernel_context_features.py",
+    "initial": "01bb89fbe21dcd61f9e54e13a62ffd3de258c2b27352a321ada0e034bc4c591e",
+    "current": "a82acc80c658b372f483f9f1dd8f7e75065b1ab83ca8b970df6a3a887110d359"
+  }
+]

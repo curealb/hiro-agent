@@ -1,0 +1,15 @@
+unformatted: File would be reformatted
+  --> docs/kernel/handoffs/B3.md:29:22
+   |
+28 | worker = kernel.worker(poll_interval=0.5)
+   - await worker.tick()       # 至多一个任务；首次先恢复遗留 active Run
+   - await worker.recover()    # 对账后唤醒已回答的交互
+29 + await worker.tick()  # 至多一个任务；首次先恢复遗留 active Run
+30 + await worker.recover()  # 对账后唤醒已回答的交互
+31 | await worker.serve(stop)  # 独立进程持续循环
+   - await worker.close()     # B1 锁在执行停止和清理后释放
+32 + await worker.close()  # B1 锁在执行停止和清理后释放
+33 | ```
+   |
+
+1 file would be reformatted, 91 files already formatted

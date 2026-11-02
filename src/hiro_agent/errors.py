@@ -31,3 +31,7 @@ class RunCancelled(HiroError):
 
 class ToolError(HiroError):
     pass
+
+
+class RunSuspended(HiroError):
+    """A durable interaction is saved; settle this Run before awaiting a reply."""

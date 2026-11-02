@@ -12,6 +12,7 @@ from uuid import uuid4
 from pydantic import Field, ValidationError
 
 from hiro_agent.agent import Agent
+from hiro_agent.bots import AuthorityProvider
 from hiro_agent.budget import Budget
 from hiro_agent.config import BudgetConfig, SubagentsConfig
 from hiro_agent.context import IdentityPreprocessor, PassthroughContext
@@ -115,6 +116,7 @@ class SubagentManager:
         *,
         role_models: dict[str, ModelService] | None = None,
         model_ids: dict[str, str] | None = None,
+        authority: AuthorityProvider | None = None,
     ) -> None:
         self.model = model
         self.registry = registry.restricted(READ_TOOLS)
@@ -122,6 +124,7 @@ class SubagentManager:
         self.config = config
         self.role_models = role_models or {}
         self.model_ids = model_ids or {}
+        self.authority = authority
         self.events = events or EventBus()
         self._active: dict[asyncio.Task[ToolResult], Cancellation] = {}
         self._closed = False
@@ -225,7 +228,13 @@ class SubagentManager:
             agent = Agent(
                 session,
                 self.role_models.get(role, self.model),
-                ToolExecutor(self.registry, session, PermissionPolicy("read-only"), observe),
+                ToolExecutor(
+                    self.registry,
+                    session,
+                    PermissionPolicy("read-only"),
+                    observe,
+                    authority=context.authority or self.authority,
+                ),
                 PassthroughContext(),
                 IdentityPreprocessor(),
                 child_config,

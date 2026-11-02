@@ -1,0 +1,2 @@
+PASS: 70 original frozen source/test/config/contract hashes unchanged.
+PASS: final manifest contains 75 checked files; B3 documentation-only repair separately hashed.

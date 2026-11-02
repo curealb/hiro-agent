@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 
 from hiro_agent.config import BudgetConfig
 from hiro_agent.contracts import Cancellation, RunMetrics
@@ -10,13 +11,21 @@ from hiro_agent.errors import BudgetExceeded
 
 
 class Budget:
-    def __init__(self, config: BudgetConfig, parent: Budget | None = None) -> None:
+    def __init__(
+        self,
+        config: BudgetConfig,
+        parent: Budget | None = None,
+        *,
+        checkpoint: Callable[[RunMetrics], None] | None = None,
+    ) -> None:
         self.config = config
         self.parent = parent
         self.started = time.monotonic()
         self.metrics = RunMetrics()
         self._exhausted_reason: str | None = None
         self._cancellation: Cancellation | None = None
+        self._checkpoint = checkpoint
+        self._finished_elapsed: int | None = None
 
     def bind_cancellation(self, cancellation: Cancellation) -> None:
         root = self
@@ -49,6 +58,8 @@ class Budget:
             setattr(self.metrics, name, getattr(self.metrics, name) + count)
         if self.parent is not None:
             self.parent.record(**counts)
+        if self._checkpoint is not None:
+            self._checkpoint(self.finish())
 
     def _check_capacity(self, counter: str, limit: str, message: str) -> None:
         # No awaits: all limits are checked before charging any budget. Local
@@ -80,5 +91,14 @@ class Budget:
         self._claim("tool_calls", "max_tool_calls", "工具调用预算耗尽")
 
     def finish(self) -> RunMetrics:
-        self.metrics.elapsed_ms = int((time.monotonic() - self.started) * 1000)
+        self.metrics.elapsed_ms = (
+            self._finished_elapsed
+            if self._finished_elapsed is not None
+            else int((time.monotonic() - self.started) * 1000)
+        )
         return self.metrics.model_copy(deep=True)
+
+    def seal(self) -> RunMetrics:
+        """Freeze active time before the terminal journal append can yield."""
+        self._finished_elapsed = self.finish().elapsed_ms
+        return self.finish()

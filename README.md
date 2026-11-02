@@ -14,6 +14,27 @@
 
 完整配置与恢复细节见 [使用与运行机制](docs/guide.md)。
 
+## 最小 Bot 内核
+
+最小内核已按「实现 → 独立验收 → 下游实现」完成全部四个阶段，保留现有单次 `AgentService` 和 CLI 行为。开发范围、接口与每次验收证据见 [DAG 状态](docs/kernel/STATUS.md)、[接口契约](docs/kernel/CONTRACTS.md)和[需求](docs/kernel/REQUIREMENTS.md)。
+
+| 阶段 | 状态与能力 |
+| --- | --- |
+| R1 基础契约 | **已通过**：SQLite Bot 身份与配置、版本化工具白名单、执行端权限检查、Session 绑定及子 Agent 权限继承；522 项测试通过。 |
+| R2 持久执行 | **已通过**：SQLite 持久任务、独立单 worker、审批/提问跨进程恢复、一次性授权与累计预算；683 项测试通过。 |
+| R3 可重复工作 | **已通过**：Bot 独立记忆、任务摘要、工具配对完整的上下文压缩、文本 Skills、一次性与固定间隔触发；799 项测试通过。 |
+| R4 完整闭环 | **已通过**：双 Bot 持久交接与结果任务、跨 Bot 累计预算和交接次数限制；832 项测试通过。 |
+
+Bot 配置通过可选 `bot` 字段启用，包含稳定 `id`、`name`、`instructions` 和 `allowed_tools`；省略该字段的旧配置保持兼容。持久数据位于工作区 `.hiro-agent/kernel.sqlite3`，原始执行日志仍保存在 `.hiro-agent/sessions/`。使用 `hiro-agent kernel` 管理 Bot、提交任务、启动独立 worker 和答复交互，具体命令见 [内核使用指南](docs/kernel/USAGE.md)。
+
+审批挂起会结算旧调用，批准后在新 Run 中执行保存的精确操作；授权绑定任务、参数和权限版本，任务累计预算不会因续跑重置，等待不计执行时间。未知副作用进入 `needs_reconciliation`，不会自动重放。独立验收覆盖四个 SQLite/JSONL 崩溃窗口，证据和恢复边界见 [R1 报告](docs/kernel/reviews/R1.md)与 [R2 报告](docs/kernel/reviews/R2.md)。
+
+`kernel memory-*` 管理每个 Bot 的记忆；每次请求重新读取当前记忆，删除不抹去历史审计。`kernel skill-*` 管理 Markdown 技能与成功任务草稿，正文通过白名单中的 `read_skill` 读取，技能不会扩展权限。`kernel routine-*` 管理一次性或固定间隔触发，所有触发经统一 Task 入口去重；独立 worker 在执行长任务时继续接收定时任务。组合场景与原始日志保留已通过 [R3 验收](docs/kernel/reviews/R3.md)。
+
+`send_handoff` 将工作交给另一 Bot，审阅结果通过关联任务回到原 Bot；`read_handoff` 和 `kernel handoff-result` 可读取结果。交接与回传任务使用同一份持久链预算，默认最多 8 次显式交接，回传不会自动形成下一轮互聊。定时巡检 → 报告 → 等待审批 → 重启 → 批准写入 → 第二 Bot 审阅 → 原 Bot 处理结果，已通过 [R4 独立验收](docs/kernel/reviews/R4.md)，报告附真实进程、SQLite 和 JSONL 证据。
+
+入口：`hiro-agent kernel --help`。完整配置与操作步骤见 [内核使用指南](docs/kernel/USAGE.md)。范围限定为单用户、本地单 worker；不承诺外部副作用恰好发生一次，结果未知时保留现场并要求显式核实。
+
 ## 环境
 
 * Linux
@@ -39,7 +60,7 @@ mkdir -p /tmp/hiro-demo
 uv run hiro-agent --mock --workspace /tmp/hiro-demo
 ```
 
-输入任意任务，Mock 会演示完整的「模型 → 工具 → 模型」链路：
+交互终端会打开紫色全屏工作台，并提供 Demo A / Demo B 两个 Agent。输入任意任务，Mock 会演示完整的「模型 → 工具 → 模型」链路：
 
 ```text
 用户输入
@@ -49,7 +70,7 @@ uv run hiro-agent --mock --workspace /tmp/hiro-demo
   → 回答结果
 ```
 
-写入和命令各输入一次 `y` 批准；拒绝后演示停止。Mock 用于验证运行链路，不理解任意编程需求；请使用允许覆盖 `hiro-demo.txt` 的演示目录。
+在 TUI 中按 `F3` 处理写入和命令审批；拒绝后演示停止。输入 `/chat` 可切换到传统聊天，也可用 `uv run hiro-agent chat --mock --workspace /tmp/hiro-demo` 启动，在审批时输入 `y` 批准。Mock 用于验证运行链路，不理解任意编程需求；请使用允许覆盖 `hiro-demo.txt` 的演示目录。
 
 ### 接入真实模型
 
@@ -73,15 +94,45 @@ uv run hiro-agent chat --config configs/baseline.json --workspace /path/to/your/
 
 完整配置见 [configs/baseline.json](configs/baseline.json)；`HIRO_BASE_URL`、`HIRO_MODEL` 可覆盖对应配置，`--mock` 强制使用 Mock。真实模式没有默认模型名，需要显式设置 `HIRO_MODEL` 或配置中的 `model.model`。
 
+## 多 Agent TUI
+
+在交互终端直接运行 `uv run hiro-agent`，默认打开紫色全屏工作台。在左侧搜索并切换持久 Agent，右侧查看各自对话、发送任务和处理审批。切换时保留各自的草稿，后台任务继续执行。
+
+```bash
+# 默认入口，或显式进入 TUI
+uv run hiro-agent --workspace /path/to/your/project
+uv run hiro-agent tui --workspace /path/to/your/project
+
+# 无需 API Key 的双 Agent 演示
+mkdir -p /tmp/hiro-tui-demo
+uv run hiro-agent tui --demo --workspace /tmp/hiro-tui-demo
+
+# 导入多个 Bot 配置，直接打开指定 Agent
+uv run hiro-agent tui -w /path/to/your/project -c writer.json -c reviewer.json --agent writer
+```
+
+![多 Agent TUI：左侧切换，右侧对话与待处理请求](docs/images/tui-preview.png)
+
+图片来自实际 TUI 渲染，内容为布局示例。鼠标点击 Agent 即可切换；键盘用 `F2`、`↑/↓`、`Enter`，或直接 `Alt+↑/↓`。`Enter` 发送，`Alt+Enter` 换行；`F3` 处理审批/提问，`F8` 选择要取消的任务。`Ctrl+Q` 退出界面，已提交任务继续由独立 worker 执行。
+
+输入 `/agent ID` 或 `/agent 完整名称` 切换 Agent，`/agent` 打开列表；输入 `/chat` 切换到传统聊天，再用 `/tui` 返回。导航命令支持补全，不会提交模型任务。同一次启动中，各 Agent 的传统聊天 Session 和 TUI 草稿都会保留。TUI 的持久任务汇总与传统聊天历史分别保存，不自动合并；切换不会移动或重放 worker 任务。
+
+首次打开没有 Bot 的工作区时，会用旧配置、模型环境变量和权限设置创建 `default` Agent；已有 Bot 使用保存的配置，启动不会自动覆盖。单个不含 `bot` 的旧配置也可通过 `--config` 导入为 `default`，多个配置需分别提供稳定的 `bot.id`。
+
+默认连接或启动独立 worker；`--no-start-worker` 关闭自动启动，`F6` 可手动启动。侧栏显示状态、最近消息、待处理数量和新活动提示；窄终端按 `F2` 打开列表、`Enter` 返回对话。更多操作及数据边界见 [TUI 使用说明](docs/tui.md)。显式 `chat`、`resume`、根命令的 `--resume` 和管道输入继续使用传统聊天。
+
 ## CLI
 
-交互终端使用独立的深色输入框，会话顶部显示模型、工作区与 Session。输入 `/` 后，命令及中文说明会显示在输入框上方，当前选项整行蓝色高亮。继续输入可筛选（如 `/co`），用 `↑` / `↓` 切换，按 `Enter` 执行；`Tab` 补全当前选项，`Esc` 收起菜单。也可以直接输入完整命令后回车。
+传统聊天可通过 `uv run hiro-agent chat` 或 TUI 内的 `/chat` 进入。交互终端使用独立的深色输入框，会话顶部显示模型、工作区与 Session。输入 `/` 后，命令及中文说明会显示在输入框上方，当前选项整行蓝色高亮。继续输入可筛选（如 `/co`），用 `↑` / `↓` 切换，按 `Enter` 执行；`Tab` 补全当前选项，`Esc` 收起菜单。也可以直接输入完整命令后回车。
 
 ```text
 /help
 /continue
 /tasks
 /resume
+/agent
+/tui
+/chat
 /exit
 ```
 
@@ -92,6 +143,9 @@ uv run hiro-agent chat --config configs/baseline.json --workspace /path/to/your/
 | `/continue`         | 继续最近未完成的任务，使用新 Run 和新预算     |
 | `/tasks`            | 查看当前 Session 最近一个 Run 的委派任务 |
 | `/resume`           | 选择历史会话；也可用 `/resume SESSION_ID` 直接切换 |
+| `/agent`            | 列出可用 Agent；`/agent ID` 或 `/agent 完整名称` 切换，名称重复时使用 ID |
+| `/tui`              | 切换到全屏工作台，并保留当前传统聊天 Session |
+| `/chat`             | 在传统聊天中保持当前 Session；在 TUI 中切换到传统聊天 |
 | `/exit` 或空闲时 Ctrl+D | 退出                          |
 | 空闲时 Ctrl+C          | 清空当前输入                      |
 | 执行或审批时 Ctrl+C       | 取消当前 Run，清理后返回输入提示          |
@@ -157,6 +211,8 @@ Hiro 还为循环设置了可配置的预算，防止错误的模型或工具链
 | 总运行时间（包含模型、工具和审批） | 600 秒 |
 
 预算耗尽、上下文超限或模型输出被长度限制截断时暂停；截断响应中的工具不会执行。Ctrl+C 取消当前 Run，模型请求或主循环异常会结束当前 Run 并记录失败。暂停后可用 `/continue` 在新 Run 中继续，并获得新预算。参数错误与权限拒绝也计入工具预算。
+
+上述 `/continue` 行为属于原交互式 `chat/resume` 入口。`kernel` 持久 Task 使用跨 Run 累计预算，审批或提问等待不计执行时间，续跑不会获得新的总额度。
 
 ## 只读子 Agent
 
@@ -224,7 +280,7 @@ uv run hiro-agent --mock --subagents --workspace /tmp/hiro-subagents-demo
 
 ## 当前边界
 
-* 保留完整历史，尚无自动摘要或上下文裁剪。
+* 持久 Bot 支持任务摘要和上下文压缩，原始 JSONL 始终保留；原交互式入口仍使用完整历史。
 
 * 仅支持文本，支持流式与完整响应；网络请求不自动重试。
 
@@ -232,7 +288,7 @@ uv run hiro-agent --mock --subagents --workspace /tmp/hiro-subagents-demo
 
 * 恢复不回滚文件，也不保证外部副作用恰好发生一次。
 
-* 尚无 MCP 集成、HTTP API、TUI / Web UI、Benchmark 或可写子 Agent。
+* 尚无 MCP 集成、HTTP API、Web UI、Benchmark 或可写子 Agent。
 
 ## 开发与验证
 

@@ -1,0 +1,4828 @@
+{
+  "test_accepted_message_survives0": {
+    "durable_tasks": [
+      {
+        "id": "043584a21e704f38ab83a1fcf866a1dc",
+        "bot_id": "a",
+        "session_id": "2339ae50d0734922b05f56d59c0e79f1",
+        "text": "R4 send",
+        "state": "needs_reconciliation",
+        "revision": 6,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "043584a21e704f38ab83a1fcf866a1dc",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 37
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "",
+        "reason": "工具副作用结果未知，需要人工核实",
+        "created_at": "2026-11-01T18:47:31.581873Z",
+        "updated_at": "2026-11-01T18:47:32.195799Z"
+      },
+      {
+        "id": "96f623669dd7489294bf2301cef1e5b3",
+        "bot_id": "b",
+        "session_id": "d67ad6eb1de44ce6bcc36041ba393333",
+        "text": "R4 review",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff",
+        "idempotency_key": "handoff:f0bf151624764eb9855c0365f010b516",
+        "chain_id": "043584a21e704f38ab83a1fcf866a1dc",
+        "parent_task_id": "043584a21e704f38ab83a1fcf866a1dc",
+        "metadata": {
+          "message_id": "f0bf151624764eb9855c0365f010b516",
+          "source_bot_id": "a",
+          "source_task_id": "043584a21e704f38ab83a1fcf866a1dc"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 63
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:32.204481Z",
+        "updated_at": "2026-11-01T18:47:32.325222Z"
+      },
+      {
+        "id": "408a823d97c1449e973b2c6504a930b3",
+        "bot_id": "a",
+        "session_id": "370b15b3dfde4deabed36e71146a4dcb",
+        "text": "A Bot handoff result has returned. Read it with read_handoff using message_id f0bf151624764eb9855c0365f010b516. Original source Task: 043584a21e704f38ab83a1fcf866a1dc; target Task: 96f623669dd7489294bf2301cef1e5b3; status: succeeded.\nResult: R4 reviewer VERIFIED report\nReason: 模型完成回答",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff_result",
+        "idempotency_key": "handoff-result:f0bf151624764eb9855c0365f010b516",
+        "chain_id": "043584a21e704f38ab83a1fcf866a1dc",
+        "parent_task_id": "96f623669dd7489294bf2301cef1e5b3",
+        "metadata": {
+          "message_id": "f0bf151624764eb9855c0365f010b516",
+          "source_task_id": "043584a21e704f38ab83a1fcf866a1dc",
+          "target_task_id": "96f623669dd7489294bf2301cef1e5b3"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 68
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 received and processed: {\"message_id\":\"f0bf151624764eb9855c0365f010b516\",\"source_bot_id\":\"a\",\"source_task_id\":\"043584a21e704f38ab83a1fcf866a1dc\",\"target_bot_id\":\"b\",\"target_task_id\":\"96f623669dd7489294bf2301cef1e5b3\",\"chain_id\":\"043584a21e704f38ab83a1fcf866a1dc\",\"state\":\"succeeded\",\"output\":\"R4 reviewer VERIFIED report\",\"reason\":\"模型完成回答\",\"delivery_task_id\":\"408a823d97c1449e973b2c6504a930b3\",\"created_at\":\"2026-11-01T18:47:32.333534Z\"}",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:32.341685Z",
+        "updated_at": "2026-11-01T18:47:32.742894Z"
+      }
+    ],
+    "durable_runs": [
+      {
+        "id": "54a0b10ad5ed4de29d10892d3575b5ac",
+        "task_id": "043584a21e704f38ab83a1fcf866a1dc",
+        "session_id": "2339ae50d0734922b05f56d59c0e79f1",
+        "worker_id": "ac188d0b8062450fb98eb51a0894fe1c",
+        "state": "uncertain",
+        "metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 37
+        },
+        "result": {
+          "session_id": "2339ae50d0734922b05f56d59c0e79f1",
+          "run_id": "54a0b10ad5ed4de29d10892d3575b5ac",
+          "status": "paused",
+          "reason": "interrupted",
+          "output": "",
+          "metrics": {
+            "model_requests": 1,
+            "worker_steps": 1,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 1,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 1,
+            "elapsed_ms": 37
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:31.885778Z",
+        "started_at": "2026-11-01T18:47:31.892545Z",
+        "finished_at": "2026-11-01T18:47:32.195744Z"
+      },
+      {
+        "id": "3c44de80f9904f949ecbad7fc67f10ad",
+        "task_id": "96f623669dd7489294bf2301cef1e5b3",
+        "session_id": "d67ad6eb1de44ce6bcc36041ba393333",
+        "worker_id": "d2a3eb538c5a4e3aafbf9ceba54167f7",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 63
+        },
+        "result": {
+          "session_id": "d67ad6eb1de44ce6bcc36041ba393333",
+          "run_id": "3c44de80f9904f949ecbad7fc67f10ad",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 reviewer VERIFIED report",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 63
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:32.226093Z",
+        "started_at": "2026-11-01T18:47:32.233282Z",
+        "finished_at": "2026-11-01T18:47:32.325166Z"
+      },
+      {
+        "id": "5dbf041fe4db4675ba16df3628ed33f5",
+        "task_id": "408a823d97c1449e973b2c6504a930b3",
+        "session_id": "370b15b3dfde4deabed36e71146a4dcb",
+        "worker_id": "fb96366048dd4d0aa8395fa72328c213",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 68
+        },
+        "result": {
+          "session_id": "370b15b3dfde4deabed36e71146a4dcb",
+          "run_id": "5dbf041fe4db4675ba16df3628ed33f5",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 received and processed: {\"message_id\":\"f0bf151624764eb9855c0365f010b516\",\"source_bot_id\":\"a\",\"source_task_id\":\"043584a21e704f38ab83a1fcf866a1dc\",\"target_bot_id\":\"b\",\"target_task_id\":\"96f623669dd7489294bf2301cef1e5b3\",\"chain_id\":\"043584a21e704f38ab83a1fcf866a1dc\",\"state\":\"succeeded\",\"output\":\"R4 reviewer VERIFIED report\",\"reason\":\"模型完成回答\",\"delivery_task_id\":\"408a823d97c1449e973b2c6504a930b3\",\"created_at\":\"2026-11-01T18:47:32.333534Z\"}",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 68
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:32.633195Z",
+        "started_at": "2026-11-01T18:47:32.640778Z",
+        "finished_at": "2026-11-01T18:47:32.742832Z"
+      }
+    ],
+    "task_chains": [
+      {
+        "id": "043584a21e704f38ab83a1fcf866a1dc",
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 8,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 5,
+          "worker_steps": 5,
+          "tool_calls": 3,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 5,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 5,
+          "elapsed_ms": 168
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "f0bf151624764eb9855c0365f010b516",
+        "source_bot_id": "a",
+        "source_task_id": "043584a21e704f38ab83a1fcf866a1dc",
+        "target_bot_id": "b",
+        "text": "R4 review",
+        "idempotency_key": "review",
+        "chain_id": "043584a21e704f38ab83a1fcf866a1dc",
+        "hop": 1,
+        "target_task_id": "96f623669dd7489294bf2301cef1e5b3",
+        "created_at": "2026-11-01T18:47:31.956653Z"
+      }
+    ],
+    "handoff_results": [
+      {
+        "message_id": "f0bf151624764eb9855c0365f010b516",
+        "source_bot_id": "a",
+        "source_task_id": "043584a21e704f38ab83a1fcf866a1dc",
+        "target_bot_id": "b",
+        "target_task_id": "96f623669dd7489294bf2301cef1e5b3",
+        "chain_id": "043584a21e704f38ab83a1fcf866a1dc",
+        "state": "succeeded",
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "delivery_task_id": "408a823d97c1449e973b2c6504a930b3",
+        "created_at": "2026-11-01T18:47:32.333534Z"
+      }
+    ]
+  },
+  "test_child_and_result_tasks_ca0": {
+    "durable_tasks": [
+      {
+        "id": "159fdf686b524751af648bd3c988b10e",
+        "bot_id": "a",
+        "session_id": "e19e814a7ea146fb928a706fb3c3885c",
+        "text": "root",
+        "state": "queued",
+        "revision": 1,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "159fdf686b524751af648bd3c988b10e",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 64,
+          "max_tool_calls": 128,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 0,
+          "worker_steps": 0,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 0
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "",
+        "reason": "",
+        "created_at": "2026-11-01T18:46:52.269286Z",
+        "updated_at": "2026-11-01T18:46:52.269288Z"
+      }
+    ],
+    "durable_runs": [],
+    "task_chains": [
+      {
+        "id": "159fdf686b524751af648bd3c988b10e",
+        "budget": {
+          "max_model_requests": 64,
+          "max_tool_calls": 128,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 1,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 0,
+          "worker_steps": 0,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 0
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "42a5edc9d7464520aab9c66ffdb29cfb",
+        "source_bot_id": "a",
+        "source_task_id": "159fdf686b524751af648bd3c988b10e",
+        "target_bot_id": "b",
+        "text": "review",
+        "idempotency_key": "once",
+        "chain_id": "159fdf686b524751af648bd3c988b10e",
+        "hop": 1,
+        "target_task_id": null,
+        "created_at": "2026-11-01T18:46:52.278325Z"
+      }
+    ],
+    "handoff_results": []
+  },
+  "test_child_and_result_tasks_ca1": {
+    "durable_tasks": [
+      {
+        "id": "b33d51bfbc754517981eb2a148bd4a48",
+        "bot_id": "a",
+        "session_id": "ce9f881001ff432abf9383e669147fc1",
+        "text": "root",
+        "state": "queued",
+        "revision": 1,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "b33d51bfbc754517981eb2a148bd4a48",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 64,
+          "max_tool_calls": 128,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 0,
+          "worker_steps": 0,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 0
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "",
+        "reason": "",
+        "created_at": "2026-11-01T18:46:52.391333Z",
+        "updated_at": "2026-11-01T18:46:52.391335Z"
+      }
+    ],
+    "durable_runs": [],
+    "task_chains": [
+      {
+        "id": "b33d51bfbc754517981eb2a148bd4a48",
+        "budget": {
+          "max_model_requests": 64,
+          "max_tool_calls": 128,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 1,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 0,
+          "worker_steps": 0,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 0
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "3f740f67418043e3af54bc3b7ed8c65c",
+        "source_bot_id": "a",
+        "source_task_id": "b33d51bfbc754517981eb2a148bd4a48",
+        "target_bot_id": "b",
+        "text": "review",
+        "idempotency_key": "once",
+        "chain_id": "b33d51bfbc754517981eb2a148bd4a48",
+        "hop": 1,
+        "target_task_id": null,
+        "created_at": "2026-11-01T18:46:52.402166Z"
+      }
+    ],
+    "handoff_results": []
+  },
+  "test_child_and_result_tasks_ca2": {
+    "durable_tasks": [
+      {
+        "id": "370d0b084bf1492197e31d33df6a4084",
+        "bot_id": "a",
+        "session_id": "59c85e87b9524e89a46ea8251231d1a7",
+        "text": "root",
+        "state": "queued",
+        "revision": 1,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "370d0b084bf1492197e31d33df6a4084",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 64,
+          "max_tool_calls": 128,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 0,
+          "worker_steps": 0,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 0
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "",
+        "reason": "",
+        "created_at": "2026-11-01T18:46:52.518295Z",
+        "updated_at": "2026-11-01T18:46:52.518297Z"
+      }
+    ],
+    "durable_runs": [],
+    "task_chains": [
+      {
+        "id": "370d0b084bf1492197e31d33df6a4084",
+        "budget": {
+          "max_model_requests": 64,
+          "max_tool_calls": 128,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 1,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 0,
+          "worker_steps": 0,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 0
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "501fc504dfd544a2af265e7638f2a1b0",
+        "source_bot_id": "a",
+        "source_task_id": "370d0b084bf1492197e31d33df6a4084",
+        "target_bot_id": "b",
+        "text": "review",
+        "idempotency_key": "once",
+        "chain_id": "370d0b084bf1492197e31d33df6a4084",
+        "hop": 1,
+        "target_task_id": null,
+        "created_at": "2026-11-01T18:46:52.527386Z"
+      }
+    ],
+    "handoff_results": []
+  },
+  "test_delivery_obeys_exhausted_0": {
+    "durable_tasks": [
+      {
+        "id": "8914f2584f864f2aa34a5a5675734acf",
+        "bot_id": "a",
+        "session_id": "a28d62198ec14c058dc0f840ff08fa6b",
+        "text": "R4 send",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "8914f2584f864f2aa34a5a5675734acf",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 78
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 completed",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:45.874726Z",
+        "updated_at": "2026-11-01T18:47:46.279012Z"
+      },
+      {
+        "id": "207b2a1beeb4486480d4c92874ba61ef",
+        "bot_id": "b",
+        "session_id": "95efc184cf65479087362b3d2c1c7ad6",
+        "text": "R4 review",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff",
+        "idempotency_key": "handoff:0f2766422c9d4756a4bf534596b058f7",
+        "chain_id": "8914f2584f864f2aa34a5a5675734acf",
+        "parent_task_id": "8914f2584f864f2aa34a5a5675734acf",
+        "metadata": {
+          "message_id": "0f2766422c9d4756a4bf534596b058f7",
+          "source_bot_id": "a",
+          "source_task_id": "8914f2584f864f2aa34a5a5675734acf"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 71
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:46.287455Z",
+        "updated_at": "2026-11-01T18:47:46.703310Z"
+      },
+      {
+        "id": "e3044c25ba0f4852acc472e942e47f13",
+        "bot_id": "a",
+        "session_id": "6c709de18a1c4104b174fb904422aa21",
+        "text": "A Bot handoff result has returned. Read it with read_handoff using message_id 0f2766422c9d4756a4bf534596b058f7. Original source Task: 8914f2584f864f2aa34a5a5675734acf; target Task: 207b2a1beeb4486480d4c92874ba61ef; status: succeeded.\nResult: R4 reviewer VERIFIED report\nReason: 模型完成回答",
+        "state": "failed",
+        "revision": 2,
+        "source": "handoff_result",
+        "idempotency_key": "handoff-result:0f2766422c9d4756a4bf534596b058f7",
+        "chain_id": "8914f2584f864f2aa34a5a5675734acf",
+        "parent_task_id": "207b2a1beeb4486480d4c92874ba61ef",
+        "metadata": {
+          "message_id": "0f2766422c9d4756a4bf534596b058f7",
+          "source_task_id": "8914f2584f864f2aa34a5a5675734acf",
+          "target_task_id": "207b2a1beeb4486480d4c92874ba61ef"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 0,
+          "worker_steps": 0,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 0
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "",
+        "reason": "Chain cumulative model request budget exhausted",
+        "created_at": "2026-11-01T18:47:46.744812Z",
+        "updated_at": "2026-11-01T18:47:47.076992Z"
+      }
+    ],
+    "durable_runs": [
+      {
+        "id": "8a37ff0153954b67a76543f5793bf867",
+        "task_id": "8914f2584f864f2aa34a5a5675734acf",
+        "session_id": "a28d62198ec14c058dc0f840ff08fa6b",
+        "worker_id": "d819e8e773464caba941be08e70568ae",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 78
+        },
+        "result": {
+          "session_id": "a28d62198ec14c058dc0f840ff08fa6b",
+          "run_id": "8a37ff0153954b67a76543f5793bf867",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 completed",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 78
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:46.160359Z",
+        "started_at": "2026-11-01T18:47:46.167895Z",
+        "finished_at": "2026-11-01T18:47:46.278949Z"
+      },
+      {
+        "id": "8084a61a444242719fea8dee84dd0b8b",
+        "task_id": "207b2a1beeb4486480d4c92874ba61ef",
+        "session_id": "95efc184cf65479087362b3d2c1c7ad6",
+        "worker_id": "fc977c5311214542ba477cabd103634c",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 71
+        },
+        "result": {
+          "session_id": "95efc184cf65479087362b3d2c1c7ad6",
+          "run_id": "8084a61a444242719fea8dee84dd0b8b",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 reviewer VERIFIED report",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 71
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:46.593696Z",
+        "started_at": "2026-11-01T18:47:46.600937Z",
+        "finished_at": "2026-11-01T18:47:46.703242Z"
+      }
+    ],
+    "task_chains": [
+      {
+        "id": "8914f2584f864f2aa34a5a5675734acf",
+        "budget": {
+          "max_model_requests": 4,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 8,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 4,
+          "worker_steps": 4,
+          "tool_calls": 2,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 4,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 4,
+          "elapsed_ms": 149
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "0f2766422c9d4756a4bf534596b058f7",
+        "source_bot_id": "a",
+        "source_task_id": "8914f2584f864f2aa34a5a5675734acf",
+        "target_bot_id": "b",
+        "text": "R4 review",
+        "idempotency_key": "review",
+        "chain_id": "8914f2584f864f2aa34a5a5675734acf",
+        "hop": 1,
+        "target_task_id": "207b2a1beeb4486480d4c92874ba61ef",
+        "created_at": "2026-11-01T18:47:46.235836Z"
+      }
+    ],
+    "handoff_results": [
+      {
+        "message_id": "0f2766422c9d4756a4bf534596b058f7",
+        "source_bot_id": "a",
+        "source_task_id": "8914f2584f864f2aa34a5a5675734acf",
+        "target_bot_id": "b",
+        "target_task_id": "207b2a1beeb4486480d4c92874ba61ef",
+        "chain_id": "8914f2584f864f2aa34a5a5675734acf",
+        "state": "succeeded",
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "delivery_task_id": "e3044c25ba0f4852acc472e942e47f13",
+        "created_at": "2026-11-01T18:47:46.727594Z"
+      }
+    ]
+  },
+  "test_delivery_obeys_exhausted_1": {
+    "durable_tasks": [
+      {
+        "id": "cd0ddbd0bdfe4847aeb8e92cd186a274",
+        "bot_id": "a",
+        "session_id": "2c12a3a663f94e4e8d7d6ecc2c40e167",
+        "text": "R4 send",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "cd0ddbd0bdfe4847aeb8e92cd186a274",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 83
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 completed",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:50.617142Z",
+        "updated_at": "2026-11-01T18:47:51.025879Z"
+      },
+      {
+        "id": "40a6b244b4084e73ac2ea340a6ddef01",
+        "bot_id": "b",
+        "session_id": "17469ad1a1fe46649b45249df9d296ea",
+        "text": "R4 review",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff",
+        "idempotency_key": "handoff:54fe0f0796e14271bc3c5134c5ad0f48",
+        "chain_id": "cd0ddbd0bdfe4847aeb8e92cd186a274",
+        "parent_task_id": "cd0ddbd0bdfe4847aeb8e92cd186a274",
+        "metadata": {
+          "message_id": "54fe0f0796e14271bc3c5134c5ad0f48",
+          "source_bot_id": "a",
+          "source_task_id": "cd0ddbd0bdfe4847aeb8e92cd186a274"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 77
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:51.037452Z",
+        "updated_at": "2026-11-01T18:47:51.465898Z"
+      },
+      {
+        "id": "a03aab5e593c457e98a8cacc87823fee",
+        "bot_id": "a",
+        "session_id": "16432c55e07040dd9c330130cb1493ca",
+        "text": "A Bot handoff result has returned. Read it with read_handoff using message_id 54fe0f0796e14271bc3c5134c5ad0f48. Original source Task: cd0ddbd0bdfe4847aeb8e92cd186a274; target Task: 40a6b244b4084e73ac2ea340a6ddef01; status: succeeded.\nResult: R4 reviewer VERIFIED report\nReason: 模型完成回答",
+        "state": "failed",
+        "revision": 2,
+        "source": "handoff_result",
+        "idempotency_key": "handoff-result:54fe0f0796e14271bc3c5134c5ad0f48",
+        "chain_id": "cd0ddbd0bdfe4847aeb8e92cd186a274",
+        "parent_task_id": "40a6b244b4084e73ac2ea340a6ddef01",
+        "metadata": {
+          "message_id": "54fe0f0796e14271bc3c5134c5ad0f48",
+          "source_task_id": "cd0ddbd0bdfe4847aeb8e92cd186a274",
+          "target_task_id": "40a6b244b4084e73ac2ea340a6ddef01"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 0,
+          "worker_steps": 0,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 0
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "",
+        "reason": "Chain cumulative tool call budget exhausted",
+        "created_at": "2026-11-01T18:47:51.507200Z",
+        "updated_at": "2026-11-01T18:47:51.822327Z"
+      }
+    ],
+    "durable_runs": [
+      {
+        "id": "f391afeb07a6434a98ab9b9687de2351",
+        "task_id": "cd0ddbd0bdfe4847aeb8e92cd186a274",
+        "session_id": "2c12a3a663f94e4e8d7d6ecc2c40e167",
+        "worker_id": "8ab1e05859ae4248ae92d142e9d74f6b",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 83
+        },
+        "result": {
+          "session_id": "2c12a3a663f94e4e8d7d6ecc2c40e167",
+          "run_id": "f391afeb07a6434a98ab9b9687de2351",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 completed",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 83
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:50.897033Z",
+        "started_at": "2026-11-01T18:47:50.905413Z",
+        "finished_at": "2026-11-01T18:47:51.025819Z"
+      },
+      {
+        "id": "10d14dc70c9c4bd18715245db9216611",
+        "task_id": "40a6b244b4084e73ac2ea340a6ddef01",
+        "session_id": "17469ad1a1fe46649b45249df9d296ea",
+        "worker_id": "38ffd2e60e57456c9db1115f5a17b86e",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 77
+        },
+        "result": {
+          "session_id": "17469ad1a1fe46649b45249df9d296ea",
+          "run_id": "10d14dc70c9c4bd18715245db9216611",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 reviewer VERIFIED report",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 77
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:51.343581Z",
+        "started_at": "2026-11-01T18:47:51.354555Z",
+        "finished_at": "2026-11-01T18:47:51.465796Z"
+      }
+    ],
+    "task_chains": [
+      {
+        "id": "cd0ddbd0bdfe4847aeb8e92cd186a274",
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 2,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 8,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 4,
+          "worker_steps": 4,
+          "tool_calls": 2,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 4,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 4,
+          "elapsed_ms": 160
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "54fe0f0796e14271bc3c5134c5ad0f48",
+        "source_bot_id": "a",
+        "source_task_id": "cd0ddbd0bdfe4847aeb8e92cd186a274",
+        "target_bot_id": "b",
+        "text": "R4 review",
+        "idempotency_key": "review",
+        "chain_id": "cd0ddbd0bdfe4847aeb8e92cd186a274",
+        "hop": 1,
+        "target_task_id": "40a6b244b4084e73ac2ea340a6ddef01",
+        "created_at": "2026-11-01T18:47:50.981228Z"
+      }
+    ],
+    "handoff_results": [
+      {
+        "message_id": "54fe0f0796e14271bc3c5134c5ad0f48",
+        "source_bot_id": "a",
+        "source_task_id": "cd0ddbd0bdfe4847aeb8e92cd186a274",
+        "target_bot_id": "b",
+        "target_task_id": "40a6b244b4084e73ac2ea340a6ddef01",
+        "chain_id": "cd0ddbd0bdfe4847aeb8e92cd186a274",
+        "state": "succeeded",
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "delivery_task_id": "a03aab5e593c457e98a8cacc87823fee",
+        "created_at": "2026-11-01T18:47:51.483061Z"
+      }
+    ]
+  },
+  "test_delivery_obeys_exhausted_2": {
+    "durable_tasks": [
+      {
+        "id": "ee7adf5288844d418915e790e1037dbe",
+        "bot_id": "a",
+        "session_id": "6f6156435e584e1db25a86910524967d",
+        "text": "R4 send slow",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "ee7adf5288844d418915e790e1037dbe",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 86
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 completed",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:55.095772Z",
+        "updated_at": "2026-11-01T18:47:55.494302Z"
+      },
+      {
+        "id": "4f9878ce896647cd8f4d630bf07788eb",
+        "bot_id": "b",
+        "session_id": "2cb6943cda6e48a78b2dbd0a988d8cd9",
+        "text": "R4 slow",
+        "state": "failed",
+        "revision": 8,
+        "source": "handoff",
+        "idempotency_key": "handoff:d9a26da3e6b94321b6f348f05bd18d64",
+        "chain_id": "ee7adf5288844d418915e790e1037dbe",
+        "parent_task_id": "ee7adf5288844d418915e790e1037dbe",
+        "metadata": {
+          "message_id": "d9a26da3e6b94321b6f348f05bd18d64",
+          "source_bot_id": "a",
+          "source_task_id": "ee7adf5288844d418915e790e1037dbe"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 1,
+          "worker_steps": 0,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 423
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "",
+        "reason": "运行时间预算耗尽",
+        "created_at": "2026-11-01T18:47:55.503950Z",
+        "updated_at": "2026-11-01T18:47:56.269348Z"
+      },
+      {
+        "id": "a0510dc397ec4daab3e35a795c5db01e",
+        "bot_id": "a",
+        "session_id": "11e3dbd69ce343e4acf5eb35e128bd4c",
+        "text": "A Bot handoff result has returned. Read it with read_handoff using message_id d9a26da3e6b94321b6f348f05bd18d64. Original source Task: ee7adf5288844d418915e790e1037dbe; target Task: 4f9878ce896647cd8f4d630bf07788eb; status: failed.\nResult: \nReason: 运行时间预算耗尽",
+        "state": "failed",
+        "revision": 2,
+        "source": "handoff_result",
+        "idempotency_key": "handoff-result:d9a26da3e6b94321b6f348f05bd18d64",
+        "chain_id": "ee7adf5288844d418915e790e1037dbe",
+        "parent_task_id": "4f9878ce896647cd8f4d630bf07788eb",
+        "metadata": {
+          "message_id": "d9a26da3e6b94321b6f348f05bd18d64",
+          "source_task_id": "ee7adf5288844d418915e790e1037dbe",
+          "target_task_id": "4f9878ce896647cd8f4d630bf07788eb"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 0,
+          "worker_steps": 0,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 0
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "",
+        "reason": "Chain cumulative active time budget exhausted",
+        "created_at": "2026-11-01T18:47:56.288267Z",
+        "updated_at": "2026-11-01T18:47:56.583381Z"
+      }
+    ],
+    "durable_runs": [
+      {
+        "id": "4b1b5b56d58a478297f8b726184cb4f8",
+        "task_id": "ee7adf5288844d418915e790e1037dbe",
+        "session_id": "6f6156435e584e1db25a86910524967d",
+        "worker_id": "a78fd61a3a1545e4abd0cf45a2e9ac40",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 86
+        },
+        "result": {
+          "session_id": "6f6156435e584e1db25a86910524967d",
+          "run_id": "4b1b5b56d58a478297f8b726184cb4f8",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 completed",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 86
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:55.365766Z",
+        "started_at": "2026-11-01T18:47:55.373877Z",
+        "finished_at": "2026-11-01T18:47:55.494243Z"
+      },
+      {
+        "id": "41ac7bbb5d294a6ca19af9cf5c1628d9",
+        "task_id": "4f9878ce896647cd8f4d630bf07788eb",
+        "session_id": "2cb6943cda6e48a78b2dbd0a988d8cd9",
+        "worker_id": "590b482110784dd8a1aefdef4ab95fb8",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 1,
+          "worker_steps": 0,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 423
+        },
+        "result": {
+          "session_id": "2cb6943cda6e48a78b2dbd0a988d8cd9",
+          "run_id": "41ac7bbb5d294a6ca19af9cf5c1628d9",
+          "status": "paused",
+          "reason": "运行时间预算耗尽",
+          "output": "",
+          "metrics": {
+            "model_requests": 1,
+            "worker_steps": 0,
+            "tool_calls": 0,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 0,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 0,
+            "elapsed_ms": 423
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:55.798907Z",
+        "started_at": "2026-11-01T18:47:55.809824Z",
+        "finished_at": "2026-11-01T18:47:56.269254Z"
+      }
+    ],
+    "task_chains": [
+      {
+        "id": "ee7adf5288844d418915e790e1037dbe",
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 0.5
+        },
+        "max_hops": 8,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 3,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 509
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "d9a26da3e6b94321b6f348f05bd18d64",
+        "source_bot_id": "a",
+        "source_task_id": "ee7adf5288844d418915e790e1037dbe",
+        "target_bot_id": "b",
+        "text": "R4 slow",
+        "idempotency_key": "review",
+        "chain_id": "ee7adf5288844d418915e790e1037dbe",
+        "hop": 1,
+        "target_task_id": "4f9878ce896647cd8f4d630bf07788eb",
+        "created_at": "2026-11-01T18:47:55.448314Z"
+      }
+    ],
+    "handoff_results": [
+      {
+        "message_id": "d9a26da3e6b94321b6f348f05bd18d64",
+        "source_bot_id": "a",
+        "source_task_id": "ee7adf5288844d418915e790e1037dbe",
+        "target_bot_id": "b",
+        "target_task_id": "4f9878ce896647cd8f4d630bf07788eb",
+        "chain_id": "ee7adf5288844d418915e790e1037dbe",
+        "state": "failed",
+        "output": "",
+        "reason": "运行时间预算耗尽",
+        "delivery_task_id": "a0510dc397ec4daab3e35a795c5db01e",
+        "created_at": "2026-11-01T18:47:56.279370Z"
+      }
+    ]
+  },
+  "test_explicit_cross_bot_chat_s0": {
+    "durable_tasks": [
+      {
+        "id": "19e28462376d40d994d7b914ab6c1be7",
+        "bot_id": "a",
+        "session_id": "89b23d3df1e743a6bb06fb9c608288f5",
+        "text": "R4 explicit chat",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "19e28462376d40d994d7b914ab6c1be7",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 86
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "Explicit chat finished",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:59.887556Z",
+        "updated_at": "2026-11-01T18:48:00.299126Z"
+      },
+      {
+        "id": "0650029d63014c108907f3bdf5273711",
+        "bot_id": "b",
+        "session_id": "9cf002b27f19423f819b7a44d411c34c",
+        "text": "R4 explicit chat",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff",
+        "idempotency_key": "handoff:bba8b1a8d63b4261a55bf56405ea7cff",
+        "chain_id": "19e28462376d40d994d7b914ab6c1be7",
+        "parent_task_id": "19e28462376d40d994d7b914ab6c1be7",
+        "metadata": {
+          "message_id": "bba8b1a8d63b4261a55bf56405ea7cff",
+          "source_bot_id": "a",
+          "source_task_id": "19e28462376d40d994d7b914ab6c1be7"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 86
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "Explicit chat finished",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:48:00.308006Z",
+        "updated_at": "2026-11-01T18:48:00.760166Z"
+      },
+      {
+        "id": "86ba7a8f1bd244daaf9c9692ce974d53",
+        "bot_id": "a",
+        "session_id": "4660da6c5e74418ab7d17f176c53e471",
+        "text": "R4 explicit chat",
+        "state": "failed",
+        "revision": 8,
+        "source": "handoff",
+        "idempotency_key": "handoff:134ede1fec1f4617b7e2c7813f6f44d3",
+        "chain_id": "19e28462376d40d994d7b914ab6c1be7",
+        "parent_task_id": "0650029d63014c108907f3bdf5273711",
+        "metadata": {
+          "message_id": "134ede1fec1f4617b7e2c7813f6f44d3",
+          "source_bot_id": "b",
+          "source_task_id": "0650029d63014c108907f3bdf5273711"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 1,
+          "tool_errors": 1,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 56
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "",
+        "reason": "持久任务工具失败: tool_error: Chain handoff hop limit exhausted",
+        "created_at": "2026-11-01T18:48:00.778091Z",
+        "updated_at": "2026-11-01T18:48:01.192870Z"
+      },
+      {
+        "id": "537e81a6eeaf4857becd3212b3624925",
+        "bot_id": "a",
+        "session_id": "564d71c951fc4c408f3ed3e68f5f7807",
+        "text": "A Bot handoff result has returned. Read it with read_handoff using message_id bba8b1a8d63b4261a55bf56405ea7cff. Original source Task: 19e28462376d40d994d7b914ab6c1be7; target Task: 0650029d63014c108907f3bdf5273711; status: succeeded.\nResult: Explicit chat finished\nReason: 模型完成回答",
+        "state": "failed",
+        "revision": 8,
+        "source": "handoff_result",
+        "idempotency_key": "handoff-result:bba8b1a8d63b4261a55bf56405ea7cff",
+        "chain_id": "19e28462376d40d994d7b914ab6c1be7",
+        "parent_task_id": "0650029d63014c108907f3bdf5273711",
+        "metadata": {
+          "message_id": "bba8b1a8d63b4261a55bf56405ea7cff",
+          "source_task_id": "19e28462376d40d994d7b914ab6c1be7",
+          "target_task_id": "0650029d63014c108907f3bdf5273711"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 1,
+          "tool_errors": 1,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 62
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "",
+        "reason": "持久任务工具失败: tool_error: Chain handoff hop limit exhausted",
+        "created_at": "2026-11-01T18:48:00.797023Z",
+        "updated_at": "2026-11-01T18:48:01.630530Z"
+      },
+      {
+        "id": "96cc3ebd0268444abeece67be729b31c",
+        "bot_id": "b",
+        "session_id": "5da197be95fc496ebc942b06eca2672c",
+        "text": "A Bot handoff result has returned. Read it with read_handoff using message_id 134ede1fec1f4617b7e2c7813f6f44d3. Original source Task: 0650029d63014c108907f3bdf5273711; target Task: 86ba7a8f1bd244daaf9c9692ce974d53; status: failed.\nResult: \nReason: 持久任务工具失败: tool_error: Chain handoff hop limit exhausted",
+        "state": "failed",
+        "revision": 8,
+        "source": "handoff_result",
+        "idempotency_key": "handoff-result:134ede1fec1f4617b7e2c7813f6f44d3",
+        "chain_id": "19e28462376d40d994d7b914ab6c1be7",
+        "parent_task_id": "86ba7a8f1bd244daaf9c9692ce974d53",
+        "metadata": {
+          "message_id": "134ede1fec1f4617b7e2c7813f6f44d3",
+          "source_task_id": "0650029d63014c108907f3bdf5273711",
+          "target_task_id": "86ba7a8f1bd244daaf9c9692ce974d53"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 1,
+          "tool_errors": 1,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 56
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "",
+        "reason": "持久任务工具失败: tool_error: Chain handoff hop limit exhausted",
+        "created_at": "2026-11-01T18:48:01.209114Z",
+        "updated_at": "2026-11-01T18:48:02.027191Z"
+      }
+    ],
+    "durable_runs": [
+      {
+        "id": "82e5f58efda541e69ce294b96228ebda",
+        "task_id": "19e28462376d40d994d7b914ab6c1be7",
+        "session_id": "89b23d3df1e743a6bb06fb9c608288f5",
+        "worker_id": "17f8472d059c41e29d63d524bc6a7005",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 86
+        },
+        "result": {
+          "session_id": "89b23d3df1e743a6bb06fb9c608288f5",
+          "run_id": "82e5f58efda541e69ce294b96228ebda",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "Explicit chat finished",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 86
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:48:00.171756Z",
+        "started_at": "2026-11-01T18:48:00.179218Z",
+        "finished_at": "2026-11-01T18:48:00.299063Z"
+      },
+      {
+        "id": "d855ca9895bf481089b4b841e178cb37",
+        "task_id": "0650029d63014c108907f3bdf5273711",
+        "session_id": "9cf002b27f19423f819b7a44d411c34c",
+        "worker_id": "2f34ab9054e544ba8a5d94fe585d7e69",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 86
+        },
+        "result": {
+          "session_id": "9cf002b27f19423f819b7a44d411c34c",
+          "run_id": "d855ca9895bf481089b4b841e178cb37",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "Explicit chat finished",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 86
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:48:00.630370Z",
+        "started_at": "2026-11-01T18:48:00.640434Z",
+        "finished_at": "2026-11-01T18:48:00.760100Z"
+      },
+      {
+        "id": "d67911cf05ec445da55d34b96b401c8a",
+        "task_id": "86ba7a8f1bd244daaf9c9692ce974d53",
+        "session_id": "4660da6c5e74418ab7d17f176c53e471",
+        "worker_id": "fbdcdb1ff37c4e299ebdcd942a5917de",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 1,
+          "tool_errors": 1,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 56
+        },
+        "result": {
+          "session_id": "4660da6c5e74418ab7d17f176c53e471",
+          "run_id": "d67911cf05ec445da55d34b96b401c8a",
+          "status": "failed",
+          "reason": "持久任务工具失败: tool_error: Chain handoff hop limit exhausted",
+          "output": "",
+          "metrics": {
+            "model_requests": 1,
+            "worker_steps": 1,
+            "tool_calls": 1,
+            "tool_errors": 1,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 1,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 1,
+            "elapsed_ms": 56
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:48:01.097055Z",
+        "started_at": "2026-11-01T18:48:01.107335Z",
+        "finished_at": "2026-11-01T18:48:01.192815Z"
+      },
+      {
+        "id": "cdff5a6ad58442d09f7c9b74bdd57291",
+        "task_id": "537e81a6eeaf4857becd3212b3624925",
+        "session_id": "564d71c951fc4c408f3ed3e68f5f7807",
+        "worker_id": "aa49d233b0964ec3899f48f549864c4f",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 1,
+          "tool_errors": 1,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 62
+        },
+        "result": {
+          "session_id": "564d71c951fc4c408f3ed3e68f5f7807",
+          "run_id": "cdff5a6ad58442d09f7c9b74bdd57291",
+          "status": "failed",
+          "reason": "持久任务工具失败: tool_error: Chain handoff hop limit exhausted",
+          "output": "",
+          "metrics": {
+            "model_requests": 1,
+            "worker_steps": 1,
+            "tool_calls": 1,
+            "tool_errors": 1,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 1,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 1,
+            "elapsed_ms": 62
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:48:01.522249Z",
+        "started_at": "2026-11-01T18:48:01.529074Z",
+        "finished_at": "2026-11-01T18:48:01.630475Z"
+      },
+      {
+        "id": "7ba10077f51942719fa2167dc8fb1036",
+        "task_id": "96cc3ebd0268444abeece67be729b31c",
+        "session_id": "5da197be95fc496ebc942b06eca2672c",
+        "worker_id": "7a5b62943cde423e95c7e3060f238f7f",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 1,
+          "tool_errors": 1,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 56
+        },
+        "result": {
+          "session_id": "5da197be95fc496ebc942b06eca2672c",
+          "run_id": "7ba10077f51942719fa2167dc8fb1036",
+          "status": "failed",
+          "reason": "持久任务工具失败: tool_error: Chain handoff hop limit exhausted",
+          "output": "",
+          "metrics": {
+            "model_requests": 1,
+            "worker_steps": 1,
+            "tool_calls": 1,
+            "tool_errors": 1,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 1,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 1,
+            "elapsed_ms": 56
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:48:01.931616Z",
+        "started_at": "2026-11-01T18:48:01.939287Z",
+        "finished_at": "2026-11-01T18:48:02.027139Z"
+      }
+    ],
+    "task_chains": [
+      {
+        "id": "19e28462376d40d994d7b914ab6c1be7",
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 2,
+        "hops_used": 2,
+        "cumulative_metrics": {
+          "model_requests": 7,
+          "worker_steps": 7,
+          "tool_calls": 5,
+          "tool_errors": 3,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 7,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 7,
+          "elapsed_ms": 346
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "bba8b1a8d63b4261a55bf56405ea7cff",
+        "source_bot_id": "a",
+        "source_task_id": "19e28462376d40d994d7b914ab6c1be7",
+        "target_bot_id": "b",
+        "text": "R4 explicit chat",
+        "idempotency_key": "chat",
+        "chain_id": "19e28462376d40d994d7b914ab6c1be7",
+        "hop": 1,
+        "target_task_id": "0650029d63014c108907f3bdf5273711",
+        "created_at": "2026-11-01T18:48:00.250626Z"
+      },
+      {
+        "id": "134ede1fec1f4617b7e2c7813f6f44d3",
+        "source_bot_id": "b",
+        "source_task_id": "0650029d63014c108907f3bdf5273711",
+        "target_bot_id": "a",
+        "text": "R4 explicit chat",
+        "idempotency_key": "chat",
+        "chain_id": "19e28462376d40d994d7b914ab6c1be7",
+        "hop": 2,
+        "target_task_id": "86ba7a8f1bd244daaf9c9692ce974d53",
+        "created_at": "2026-11-01T18:48:00.708794Z"
+      }
+    ],
+    "handoff_results": [
+      {
+        "message_id": "bba8b1a8d63b4261a55bf56405ea7cff",
+        "source_bot_id": "a",
+        "source_task_id": "19e28462376d40d994d7b914ab6c1be7",
+        "target_bot_id": "b",
+        "target_task_id": "0650029d63014c108907f3bdf5273711",
+        "chain_id": "19e28462376d40d994d7b914ab6c1be7",
+        "state": "succeeded",
+        "output": "Explicit chat finished",
+        "reason": "模型完成回答",
+        "delivery_task_id": "537e81a6eeaf4857becd3212b3624925",
+        "created_at": "2026-11-01T18:48:00.770299Z"
+      },
+      {
+        "message_id": "134ede1fec1f4617b7e2c7813f6f44d3",
+        "source_bot_id": "b",
+        "source_task_id": "0650029d63014c108907f3bdf5273711",
+        "target_bot_id": "a",
+        "target_task_id": "86ba7a8f1bd244daaf9c9692ce974d53",
+        "chain_id": "19e28462376d40d994d7b914ab6c1be7",
+        "state": "failed",
+        "output": "",
+        "reason": "持久任务工具失败: tool_error: Chain handoff hop limit exhausted",
+        "delivery_task_id": "96cc3ebd0268444abeece67be729b31c",
+        "created_at": "2026-11-01T18:48:01.201785Z"
+      }
+    ]
+  },
+  "test_full_routine_approval_pro0": {
+    "durable_tasks": [
+      {
+        "id": "bb8e65a1fed046a2bf00cfdc7bcf0530",
+        "bot_id": "a",
+        "session_id": "c74b5fb364d04bc9b26dea8bdb280b59",
+        "text": "R4 inspect",
+        "state": "succeeded",
+        "revision": 21,
+        "source": "routine",
+        "idempotency_key": "routine:e860b8f39389450e8dd0b70a9f917071:2026-11-01T18:46:52.940665+00:00",
+        "chain_id": "bb8e65a1fed046a2bf00cfdc7bcf0530",
+        "parent_task_id": null,
+        "metadata": {
+          "routine_id": "e860b8f39389450e8dd0b70a9f917071",
+          "routine_metadata": {},
+          "scheduled_at": "2026-11-01T18:46:52.940665+00:00"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 4,
+          "worker_steps": 4,
+          "tool_calls": 4,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 4,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 4,
+          "elapsed_ms": 197
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 report committed and review requested",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:46:54.425754Z",
+        "updated_at": "2026-11-01T18:46:56.665386Z"
+      },
+      {
+        "id": "b59035fe7bf94fc08404cdbd08642797",
+        "bot_id": "b",
+        "session_id": "95b91e45826d4a1eaf3390cd9562035f",
+        "text": "R4 review",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff",
+        "idempotency_key": "handoff:ab31fda9d90e4f7cb85f9ce494d9dbc0",
+        "chain_id": "bb8e65a1fed046a2bf00cfdc7bcf0530",
+        "parent_task_id": "bb8e65a1fed046a2bf00cfdc7bcf0530",
+        "metadata": {
+          "message_id": "ab31fda9d90e4f7cb85f9ce494d9dbc0",
+          "source_bot_id": "a",
+          "source_task_id": "bb8e65a1fed046a2bf00cfdc7bcf0530"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 66
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:46:56.673281Z",
+        "updated_at": "2026-11-01T18:46:57.831215Z"
+      },
+      {
+        "id": "fa6e11b92eb74ce29e176a9749e42192",
+        "bot_id": "a",
+        "session_id": "62e308ac37c94d0ba300e3051730e0e3",
+        "text": "A Bot handoff result has returned. Read it with read_handoff using message_id ab31fda9d90e4f7cb85f9ce494d9dbc0. Original source Task: bb8e65a1fed046a2bf00cfdc7bcf0530; target Task: b59035fe7bf94fc08404cdbd08642797; status: succeeded.\nResult: R4 reviewer VERIFIED report\nReason: 模型完成回答",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff_result",
+        "idempotency_key": "handoff-result:ab31fda9d90e4f7cb85f9ce494d9dbc0",
+        "chain_id": "bb8e65a1fed046a2bf00cfdc7bcf0530",
+        "parent_task_id": "b59035fe7bf94fc08404cdbd08642797",
+        "metadata": {
+          "message_id": "ab31fda9d90e4f7cb85f9ce494d9dbc0",
+          "source_task_id": "bb8e65a1fed046a2bf00cfdc7bcf0530",
+          "target_task_id": "b59035fe7bf94fc08404cdbd08642797"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 69
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 received and processed: {\"message_id\":\"ab31fda9d90e4f7cb85f9ce494d9dbc0\",\"source_bot_id\":\"a\",\"source_task_id\":\"bb8e65a1fed046a2bf00cfdc7bcf0530\",\"target_bot_id\":\"b\",\"target_task_id\":\"b59035fe7bf94fc08404cdbd08642797\",\"chain_id\":\"bb8e65a1fed046a2bf00cfdc7bcf0530\",\"state\":\"succeeded\",\"output\":\"R4 reviewer VERIFIED report\",\"reason\":\"模型完成回答\",\"delivery_task_id\":\"fa6e11b92eb74ce29e176a9749e42192\",\"created_at\":\"2026-11-01T18:46:57.838929Z\"}",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:46:57.846178Z",
+        "updated_at": "2026-11-01T18:46:58.509033Z"
+      }
+    ],
+    "durable_runs": [
+      {
+        "id": "30ab458fde4842c09491384c454ade04",
+        "task_id": "bb8e65a1fed046a2bf00cfdc7bcf0530",
+        "session_id": "c74b5fb364d04bc9b26dea8bdb280b59",
+        "worker_id": "a2d2302f67f84e73bf4c5896d818ec4b",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 2,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 86
+        },
+        "result": {
+          "session_id": "c74b5fb364d04bc9b26dea8bdb280b59",
+          "run_id": "30ab458fde4842c09491384c454ade04",
+          "status": "paused",
+          "reason": "等待审批: ef76e0b5708b4575bb58a5ec17ed7b32",
+          "output": "R4 inspection report: evidence is VERIFIED.",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 2,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 86
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:46:54.444001Z",
+        "started_at": "2026-11-01T18:46:54.450846Z",
+        "finished_at": "2026-11-01T18:46:54.573554Z"
+      },
+      {
+        "id": "fff335c987d945cf8f0b2164596b0fe9",
+        "task_id": "bb8e65a1fed046a2bf00cfdc7bcf0530",
+        "session_id": "c74b5fb364d04bc9b26dea8bdb280b59",
+        "worker_id": "3a61aaedce0f4070a4eb1f05ea3221df",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 2,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 111
+        },
+        "result": {
+          "session_id": "c74b5fb364d04bc9b26dea8bdb280b59",
+          "run_id": "fff335c987d945cf8f0b2164596b0fe9",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 report committed and review requested",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 2,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 111
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:46:56.523240Z",
+        "started_at": "2026-11-01T18:46:56.529891Z",
+        "finished_at": "2026-11-01T18:46:56.665329Z"
+      },
+      {
+        "id": "b04f67d080a7414d97260bd188668873",
+        "task_id": "b59035fe7bf94fc08404cdbd08642797",
+        "session_id": "95b91e45826d4a1eaf3390cd9562035f",
+        "worker_id": "ecedb27ab76b4a3dbe2bdb357c43f1e4",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 66
+        },
+        "result": {
+          "session_id": "95b91e45826d4a1eaf3390cd9562035f",
+          "run_id": "b04f67d080a7414d97260bd188668873",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 reviewer VERIFIED report",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 66
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:46:57.727136Z",
+        "started_at": "2026-11-01T18:46:57.735019Z",
+        "finished_at": "2026-11-01T18:46:57.831149Z"
+      },
+      {
+        "id": "d378602fd84b403899858a79fc0b0c1e",
+        "task_id": "fa6e11b92eb74ce29e176a9749e42192",
+        "session_id": "62e308ac37c94d0ba300e3051730e0e3",
+        "worker_id": "46263445a9794df6a31bf4d032a9c229",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 69
+        },
+        "result": {
+          "session_id": "62e308ac37c94d0ba300e3051730e0e3",
+          "run_id": "d378602fd84b403899858a79fc0b0c1e",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 received and processed: {\"message_id\":\"ab31fda9d90e4f7cb85f9ce494d9dbc0\",\"source_bot_id\":\"a\",\"source_task_id\":\"bb8e65a1fed046a2bf00cfdc7bcf0530\",\"target_bot_id\":\"b\",\"target_task_id\":\"b59035fe7bf94fc08404cdbd08642797\",\"chain_id\":\"bb8e65a1fed046a2bf00cfdc7bcf0530\",\"state\":\"succeeded\",\"output\":\"R4 reviewer VERIFIED report\",\"reason\":\"模型完成回答\",\"delivery_task_id\":\"fa6e11b92eb74ce29e176a9749e42192\",\"created_at\":\"2026-11-01T18:46:57.838929Z\"}",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 69
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:46:58.398945Z",
+        "started_at": "2026-11-01T18:46:58.409020Z",
+        "finished_at": "2026-11-01T18:46:58.508895Z"
+      }
+    ],
+    "task_chains": [
+      {
+        "id": "bb8e65a1fed046a2bf00cfdc7bcf0530",
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 8,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 8,
+          "worker_steps": 8,
+          "tool_calls": 6,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 8,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 8,
+          "elapsed_ms": 332
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "ab31fda9d90e4f7cb85f9ce494d9dbc0",
+        "source_bot_id": "a",
+        "source_task_id": "bb8e65a1fed046a2bf00cfdc7bcf0530",
+        "target_bot_id": "b",
+        "text": "R4 review",
+        "idempotency_key": "review",
+        "chain_id": "bb8e65a1fed046a2bf00cfdc7bcf0530",
+        "hop": 1,
+        "target_task_id": "b59035fe7bf94fc08404cdbd08642797",
+        "created_at": "2026-11-01T18:46:56.614798Z"
+      }
+    ],
+    "handoff_results": [
+      {
+        "message_id": "ab31fda9d90e4f7cb85f9ce494d9dbc0",
+        "source_bot_id": "a",
+        "source_task_id": "bb8e65a1fed046a2bf00cfdc7bcf0530",
+        "target_bot_id": "b",
+        "target_task_id": "b59035fe7bf94fc08404cdbd08642797",
+        "chain_id": "bb8e65a1fed046a2bf00cfdc7bcf0530",
+        "state": "succeeded",
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "delivery_task_id": "fa6e11b92eb74ce29e176a9749e42192",
+        "created_at": "2026-11-01T18:46:57.838929Z"
+      }
+    ]
+  },
+  "test_legacy_shared_chain_backf0": {
+    "durable_tasks": [
+      {
+        "id": "e70d4ad019c1423a8cf2ef2192c1bd6a",
+        "bot_id": "a",
+        "session_id": "19096162422648a9be3efdd2745379f1",
+        "text": "legacy root",
+        "state": "succeeded",
+        "revision": 3,
+        "source": "manual",
+        "idempotency_key": "old",
+        "chain_id": "legacy-shared",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 5,
+          "max_tool_calls": 128,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 0,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 17
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "legacy done",
+        "reason": "done",
+        "created_at": "2026-11-01T18:46:52.073798Z",
+        "updated_at": "2026-11-01T18:46:52.087060Z"
+      },
+      {
+        "id": "e6566d28a81f42738319e2d62e3d981e",
+        "bot_id": "b",
+        "session_id": "a497a34595d34ece834aa95976638e32",
+        "text": "legacy child",
+        "state": "succeeded",
+        "revision": 5,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "legacy-shared",
+        "parent_task_id": "e70d4ad019c1423a8cf2ef2192c1bd6a",
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 128,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 3,
+          "worker_steps": 0,
+          "tool_calls": 4,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 19
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "legacy done",
+        "reason": "done",
+        "created_at": "2026-11-01T18:46:52.093831Z",
+        "updated_at": "2026-11-01T18:46:52.148988Z"
+      },
+      {
+        "id": "2f7ea40b68f741dd90747f16dc9a089d",
+        "bot_id": "a",
+        "session_id": "ff8d9c3bd6cd48bbb6d4a5ed2f910fc8",
+        "text": "cannot refund",
+        "state": "failed",
+        "revision": 2,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "legacy-shared",
+        "parent_task_id": "e6566d28a81f42738319e2d62e3d981e",
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 1000,
+          "max_tool_calls": 128,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 0,
+          "worker_steps": 0,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 0
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "",
+        "reason": "Chain cumulative model request budget exhausted",
+        "created_at": "2026-11-01T18:46:52.166230Z",
+        "updated_at": "2026-11-01T18:46:52.173320Z"
+      }
+    ],
+    "durable_runs": [
+      {
+        "id": "11cc991434234d04a738c39f4807a78e",
+        "task_id": "e70d4ad019c1423a8cf2ef2192c1bd6a",
+        "session_id": "19096162422648a9be3efdd2745379f1",
+        "worker_id": "old-worker",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 0,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 17
+        },
+        "result": {
+          "session_id": "19096162422648a9be3efdd2745379f1",
+          "run_id": "11cc991434234d04a738c39f4807a78e",
+          "status": "completed",
+          "reason": "done",
+          "output": "legacy done",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 0,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 0,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 0,
+            "elapsed_ms": 17
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:46:52.080241Z",
+        "started_at": "2026-11-01T18:46:52.086966Z",
+        "finished_at": "2026-11-01T18:46:52.087013Z"
+      },
+      {
+        "id": "0468645b81344855aabd63c644c233cc",
+        "task_id": "e6566d28a81f42738319e2d62e3d981e",
+        "session_id": "a497a34595d34ece834aa95976638e32",
+        "worker_id": "old-worker",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 3,
+          "worker_steps": 0,
+          "tool_calls": 4,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 19
+        },
+        "result": {
+          "session_id": "a497a34595d34ece834aa95976638e32",
+          "run_id": "0468645b81344855aabd63c644c233cc",
+          "status": "completed",
+          "reason": "done",
+          "output": "legacy done",
+          "metrics": {
+            "model_requests": 3,
+            "worker_steps": 0,
+            "tool_calls": 4,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 0,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 0,
+            "elapsed_ms": 19
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:46:52.100524Z",
+        "started_at": "2026-11-01T18:46:52.148906Z",
+        "finished_at": "2026-11-01T18:46:52.148946Z"
+      }
+    ],
+    "task_chains": [
+      {
+        "id": "legacy-shared",
+        "budget": {
+          "max_model_requests": 5,
+          "max_tool_calls": 128,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 8,
+        "hops_used": 0,
+        "cumulative_metrics": {
+          "model_requests": 5,
+          "worker_steps": 0,
+          "tool_calls": 5,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 36
+        }
+      }
+    ],
+    "handoff_messages": [],
+    "handoff_results": []
+  },
+  "test_process_crash_in_handoff_0": {
+    "durable_tasks": [
+      {
+        "id": "260ba82bace24c2eaa071af2490e7779",
+        "bot_id": "a",
+        "session_id": "af37978362da4ef3b026383c8104d51f",
+        "text": "R4 finish",
+        "state": "succeeded",
+        "revision": 6,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "260ba82bace24c2eaa071af2490e7779",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 29
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 completed",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:03.076190Z",
+        "updated_at": "2026-11-01T18:47:03.415226Z"
+      },
+      {
+        "id": "8eb7ce6244b7424b8b4ec523a33317ac",
+        "bot_id": "b",
+        "session_id": "565a82dbe88c425f834df8344bff37d4",
+        "text": "R4 review",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff",
+        "idempotency_key": "handoff:ef80bbebb66d484eaf572f7d6fc3381f",
+        "chain_id": "260ba82bace24c2eaa071af2490e7779",
+        "parent_task_id": "260ba82bace24c2eaa071af2490e7779",
+        "metadata": {
+          "message_id": "ef80bbebb66d484eaf572f7d6fc3381f",
+          "source_bot_id": "a",
+          "source_task_id": "260ba82bace24c2eaa071af2490e7779"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 66
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:04.201451Z",
+        "updated_at": "2026-11-01T18:47:04.599078Z"
+      },
+      {
+        "id": "98b4a469c5c94650a18dc7802e6c9c97",
+        "bot_id": "a",
+        "session_id": "eb7f1d0aafa04e8290fc09abff8e4cf1",
+        "text": "A Bot handoff result has returned. Read it with read_handoff using message_id ef80bbebb66d484eaf572f7d6fc3381f. Original source Task: 260ba82bace24c2eaa071af2490e7779; target Task: 8eb7ce6244b7424b8b4ec523a33317ac; status: succeeded.\nResult: R4 reviewer VERIFIED report\nReason: 模型完成回答",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff_result",
+        "idempotency_key": "handoff-result:ef80bbebb66d484eaf572f7d6fc3381f",
+        "chain_id": "260ba82bace24c2eaa071af2490e7779",
+        "parent_task_id": "8eb7ce6244b7424b8b4ec523a33317ac",
+        "metadata": {
+          "message_id": "ef80bbebb66d484eaf572f7d6fc3381f",
+          "source_task_id": "260ba82bace24c2eaa071af2490e7779",
+          "target_task_id": "8eb7ce6244b7424b8b4ec523a33317ac"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 69
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 received and processed: {\"message_id\":\"ef80bbebb66d484eaf572f7d6fc3381f\",\"source_bot_id\":\"a\",\"source_task_id\":\"260ba82bace24c2eaa071af2490e7779\",\"target_bot_id\":\"b\",\"target_task_id\":\"8eb7ce6244b7424b8b4ec523a33317ac\",\"chain_id\":\"260ba82bace24c2eaa071af2490e7779\",\"state\":\"succeeded\",\"output\":\"R4 reviewer VERIFIED report\",\"reason\":\"模型完成回答\",\"delivery_task_id\":\"98b4a469c5c94650a18dc7802e6c9c97\",\"created_at\":\"2026-11-01T18:47:04.606937Z\"}",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:04.614225Z",
+        "updated_at": "2026-11-01T18:47:05.260038Z"
+      }
+    ],
+    "durable_runs": [
+      {
+        "id": "f52d536e273e45929bfbfe8b850fd952",
+        "task_id": "260ba82bace24c2eaa071af2490e7779",
+        "session_id": "af37978362da4ef3b026383c8104d51f",
+        "worker_id": "ade778860aae4b61a9a4e470f81eb988",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 29
+        },
+        "result": {
+          "session_id": "af37978362da4ef3b026383c8104d51f",
+          "run_id": "f52d536e273e45929bfbfe8b850fd952",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 completed",
+          "metrics": {
+            "model_requests": 1,
+            "worker_steps": 1,
+            "tool_calls": 0,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 1,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 1,
+            "elapsed_ms": 29
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:03.345382Z",
+        "started_at": "2026-11-01T18:47:03.355084Z",
+        "finished_at": "2026-11-01T18:47:03.415158Z"
+      },
+      {
+        "id": "0601298e669e4b2c83ef5341a1106e1d",
+        "task_id": "8eb7ce6244b7424b8b4ec523a33317ac",
+        "session_id": "565a82dbe88c425f834df8344bff37d4",
+        "worker_id": "0ede4aa3e01540dcb91e5766e3f16378",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 66
+        },
+        "result": {
+          "session_id": "565a82dbe88c425f834df8344bff37d4",
+          "run_id": "0601298e669e4b2c83ef5341a1106e1d",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 reviewer VERIFIED report",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 66
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:04.496023Z",
+        "started_at": "2026-11-01T18:47:04.503162Z",
+        "finished_at": "2026-11-01T18:47:04.599020Z"
+      },
+      {
+        "id": "07d9146a63464f608b0b1e657f5bc8b4",
+        "task_id": "98b4a469c5c94650a18dc7802e6c9c97",
+        "session_id": "eb7f1d0aafa04e8290fc09abff8e4cf1",
+        "worker_id": "61984f4ebb2e4db78ae1894d00e56105",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 69
+        },
+        "result": {
+          "session_id": "eb7f1d0aafa04e8290fc09abff8e4cf1",
+          "run_id": "07d9146a63464f608b0b1e657f5bc8b4",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 received and processed: {\"message_id\":\"ef80bbebb66d484eaf572f7d6fc3381f\",\"source_bot_id\":\"a\",\"source_task_id\":\"260ba82bace24c2eaa071af2490e7779\",\"target_bot_id\":\"b\",\"target_task_id\":\"8eb7ce6244b7424b8b4ec523a33317ac\",\"chain_id\":\"260ba82bace24c2eaa071af2490e7779\",\"state\":\"succeeded\",\"output\":\"R4 reviewer VERIFIED report\",\"reason\":\"模型完成回答\",\"delivery_task_id\":\"98b4a469c5c94650a18dc7802e6c9c97\",\"created_at\":\"2026-11-01T18:47:04.606937Z\"}",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 69
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:05.153085Z",
+        "started_at": "2026-11-01T18:47:05.160211Z",
+        "finished_at": "2026-11-01T18:47:05.259973Z"
+      }
+    ],
+    "task_chains": [
+      {
+        "id": "260ba82bace24c2eaa071af2490e7779",
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 8,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 5,
+          "worker_steps": 5,
+          "tool_calls": 2,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 5,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 5,
+          "elapsed_ms": 164
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "ef80bbebb66d484eaf572f7d6fc3381f",
+        "source_bot_id": "a",
+        "source_task_id": "260ba82bace24c2eaa071af2490e7779",
+        "target_bot_id": "b",
+        "text": "R4 review",
+        "idempotency_key": "cut",
+        "chain_id": "260ba82bace24c2eaa071af2490e7779",
+        "hop": 1,
+        "target_task_id": "8eb7ce6244b7424b8b4ec523a33317ac",
+        "created_at": "2026-11-01T18:47:03.708762Z"
+      }
+    ],
+    "handoff_results": [
+      {
+        "message_id": "ef80bbebb66d484eaf572f7d6fc3381f",
+        "source_bot_id": "a",
+        "source_task_id": "260ba82bace24c2eaa071af2490e7779",
+        "target_bot_id": "b",
+        "target_task_id": "8eb7ce6244b7424b8b4ec523a33317ac",
+        "chain_id": "260ba82bace24c2eaa071af2490e7779",
+        "state": "succeeded",
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "delivery_task_id": "98b4a469c5c94650a18dc7802e6c9c97",
+        "created_at": "2026-11-01T18:47:04.606937Z"
+      }
+    ]
+  },
+  "test_process_crash_in_handoff_1": {
+    "durable_tasks": [
+      {
+        "id": "39f893b446b24c219e3ccc0534e30eb2",
+        "bot_id": "a",
+        "session_id": "0fcd3cf2c89c4fb3a2ebf43b1af3a1a3",
+        "text": "R4 finish",
+        "state": "succeeded",
+        "revision": 6,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "39f893b446b24c219e3ccc0534e30eb2",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 30
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 completed",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:08.512323Z",
+        "updated_at": "2026-11-01T18:47:08.864092Z"
+      },
+      {
+        "id": "f46e5c632a1e4b3d9838f5cbef4c0bba",
+        "bot_id": "b",
+        "session_id": "bf85ec3142814a238547c99084d82523",
+        "text": "R4 review",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff",
+        "idempotency_key": "handoff:58261b8722ef4928a8ddbbd20849868a",
+        "chain_id": "39f893b446b24c219e3ccc0534e30eb2",
+        "parent_task_id": "39f893b446b24c219e3ccc0534e30eb2",
+        "metadata": {
+          "message_id": "58261b8722ef4928a8ddbbd20849868a",
+          "source_bot_id": "a",
+          "source_task_id": "39f893b446b24c219e3ccc0534e30eb2"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 73
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:09.408102Z",
+        "updated_at": "2026-11-01T18:47:10.039663Z"
+      },
+      {
+        "id": "a8f11521460644549ea6662ef322ca18",
+        "bot_id": "a",
+        "session_id": "95eb9a5900b341c6aeea8b9a4c05774d",
+        "text": "A Bot handoff result has returned. Read it with read_handoff using message_id 58261b8722ef4928a8ddbbd20849868a. Original source Task: 39f893b446b24c219e3ccc0534e30eb2; target Task: f46e5c632a1e4b3d9838f5cbef4c0bba; status: succeeded.\nResult: R4 reviewer VERIFIED report\nReason: 模型完成回答",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff_result",
+        "idempotency_key": "handoff-result:58261b8722ef4928a8ddbbd20849868a",
+        "chain_id": "39f893b446b24c219e3ccc0534e30eb2",
+        "parent_task_id": "f46e5c632a1e4b3d9838f5cbef4c0bba",
+        "metadata": {
+          "message_id": "58261b8722ef4928a8ddbbd20849868a",
+          "source_task_id": "39f893b446b24c219e3ccc0534e30eb2",
+          "target_task_id": "f46e5c632a1e4b3d9838f5cbef4c0bba"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 69
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 received and processed: {\"message_id\":\"58261b8722ef4928a8ddbbd20849868a\",\"source_bot_id\":\"a\",\"source_task_id\":\"39f893b446b24c219e3ccc0534e30eb2\",\"target_bot_id\":\"b\",\"target_task_id\":\"f46e5c632a1e4b3d9838f5cbef4c0bba\",\"chain_id\":\"39f893b446b24c219e3ccc0534e30eb2\",\"state\":\"succeeded\",\"output\":\"R4 reviewer VERIFIED report\",\"reason\":\"模型完成回答\",\"delivery_task_id\":\"a8f11521460644549ea6662ef322ca18\",\"created_at\":\"2026-11-01T18:47:10.047647Z\"}",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:10.055093Z",
+        "updated_at": "2026-11-01T18:47:10.720012Z"
+      }
+    ],
+    "durable_runs": [
+      {
+        "id": "c6d1d4ac3c684371995cff06ee42b5e5",
+        "task_id": "39f893b446b24c219e3ccc0534e30eb2",
+        "session_id": "0fcd3cf2c89c4fb3a2ebf43b1af3a1a3",
+        "worker_id": "28f4cc7606d5427d9b12069b30fa6f37",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 30
+        },
+        "result": {
+          "session_id": "0fcd3cf2c89c4fb3a2ebf43b1af3a1a3",
+          "run_id": "c6d1d4ac3c684371995cff06ee42b5e5",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 completed",
+          "metrics": {
+            "model_requests": 1,
+            "worker_steps": 1,
+            "tool_calls": 0,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 1,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 1,
+            "elapsed_ms": 30
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:08.793992Z",
+        "started_at": "2026-11-01T18:47:08.801225Z",
+        "finished_at": "2026-11-01T18:47:08.864039Z"
+      },
+      {
+        "id": "dbd7ced147fb4a78b09e071281c846d5",
+        "task_id": "f46e5c632a1e4b3d9838f5cbef4c0bba",
+        "session_id": "bf85ec3142814a238547c99084d82523",
+        "worker_id": "3b4f09f033e7444cbcbac81c88ad1778",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 73
+        },
+        "result": {
+          "session_id": "bf85ec3142814a238547c99084d82523",
+          "run_id": "dbd7ced147fb4a78b09e071281c846d5",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 reviewer VERIFIED report",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 73
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:09.912354Z",
+        "started_at": "2026-11-01T18:47:09.919498Z",
+        "finished_at": "2026-11-01T18:47:10.039601Z"
+      },
+      {
+        "id": "7c93bef4f29848d8a59dead6ed819cb5",
+        "task_id": "a8f11521460644549ea6662ef322ca18",
+        "session_id": "95eb9a5900b341c6aeea8b9a4c05774d",
+        "worker_id": "7576d7fa74ca4d2d9bf032dad4bb4a18",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 69
+        },
+        "result": {
+          "session_id": "95eb9a5900b341c6aeea8b9a4c05774d",
+          "run_id": "7c93bef4f29848d8a59dead6ed819cb5",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 received and processed: {\"message_id\":\"58261b8722ef4928a8ddbbd20849868a\",\"source_bot_id\":\"a\",\"source_task_id\":\"39f893b446b24c219e3ccc0534e30eb2\",\"target_bot_id\":\"b\",\"target_task_id\":\"f46e5c632a1e4b3d9838f5cbef4c0bba\",\"chain_id\":\"39f893b446b24c219e3ccc0534e30eb2\",\"state\":\"succeeded\",\"output\":\"R4 reviewer VERIFIED report\",\"reason\":\"模型完成回答\",\"delivery_task_id\":\"a8f11521460644549ea6662ef322ca18\",\"created_at\":\"2026-11-01T18:47:10.047647Z\"}",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 69
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:10.609403Z",
+        "started_at": "2026-11-01T18:47:10.617070Z",
+        "finished_at": "2026-11-01T18:47:10.719956Z"
+      }
+    ],
+    "task_chains": [
+      {
+        "id": "39f893b446b24c219e3ccc0534e30eb2",
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 8,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 5,
+          "worker_steps": 5,
+          "tool_calls": 2,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 5,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 5,
+          "elapsed_ms": 172
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "58261b8722ef4928a8ddbbd20849868a",
+        "source_bot_id": "a",
+        "source_task_id": "39f893b446b24c219e3ccc0534e30eb2",
+        "target_bot_id": "b",
+        "text": "R4 review",
+        "idempotency_key": "cut",
+        "chain_id": "39f893b446b24c219e3ccc0534e30eb2",
+        "hop": 1,
+        "target_task_id": "f46e5c632a1e4b3d9838f5cbef4c0bba",
+        "created_at": "2026-11-01T18:47:09.136334Z"
+      }
+    ],
+    "handoff_results": [
+      {
+        "message_id": "58261b8722ef4928a8ddbbd20849868a",
+        "source_bot_id": "a",
+        "source_task_id": "39f893b446b24c219e3ccc0534e30eb2",
+        "target_bot_id": "b",
+        "target_task_id": "f46e5c632a1e4b3d9838f5cbef4c0bba",
+        "chain_id": "39f893b446b24c219e3ccc0534e30eb2",
+        "state": "succeeded",
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "delivery_task_id": "a8f11521460644549ea6662ef322ca18",
+        "created_at": "2026-11-01T18:47:10.047647Z"
+      }
+    ]
+  },
+  "test_process_crash_in_handoff_2": {
+    "durable_tasks": [
+      {
+        "id": "2ecffaab353f4932866243bae6c5e5ec",
+        "bot_id": "a",
+        "session_id": "77c7959035ed453f9b187be4e30d619b",
+        "text": "R4 finish",
+        "state": "succeeded",
+        "revision": 6,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "2ecffaab353f4932866243bae6c5e5ec",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 29
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 completed",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:14.355387Z",
+        "updated_at": "2026-11-01T18:47:14.691223Z"
+      },
+      {
+        "id": "8316f70dd06641658f30a408e66a3094",
+        "bot_id": "b",
+        "session_id": "547d0b80c685438d82c4dd378204e464",
+        "text": "R4 review",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff",
+        "idempotency_key": "handoff:5e04b5e9c74d48a19e0eb3f7d659ed60",
+        "chain_id": "2ecffaab353f4932866243bae6c5e5ec",
+        "parent_task_id": "2ecffaab353f4932866243bae6c5e5ec",
+        "metadata": {
+          "message_id": "5e04b5e9c74d48a19e0eb3f7d659ed60",
+          "source_bot_id": "a",
+          "source_task_id": "2ecffaab353f4932866243bae6c5e5ec"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 65
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:15.280289Z",
+        "updated_at": "2026-11-01T18:47:15.657894Z"
+      },
+      {
+        "id": "c0604847ea0e494d99ae584193db9fca",
+        "bot_id": "a",
+        "session_id": "f5d50e946cf640a3aa721f8fc44cdee9",
+        "text": "A Bot handoff result has returned. Read it with read_handoff using message_id 5e04b5e9c74d48a19e0eb3f7d659ed60. Original source Task: 2ecffaab353f4932866243bae6c5e5ec; target Task: 8316f70dd06641658f30a408e66a3094; status: succeeded.\nResult: R4 reviewer VERIFIED report\nReason: 模型完成回答",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff_result",
+        "idempotency_key": "handoff-result:5e04b5e9c74d48a19e0eb3f7d659ed60",
+        "chain_id": "2ecffaab353f4932866243bae6c5e5ec",
+        "parent_task_id": "8316f70dd06641658f30a408e66a3094",
+        "metadata": {
+          "message_id": "5e04b5e9c74d48a19e0eb3f7d659ed60",
+          "source_task_id": "2ecffaab353f4932866243bae6c5e5ec",
+          "target_task_id": "8316f70dd06641658f30a408e66a3094"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 65
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 received and processed: {\"message_id\":\"5e04b5e9c74d48a19e0eb3f7d659ed60\",\"source_bot_id\":\"a\",\"source_task_id\":\"2ecffaab353f4932866243bae6c5e5ec\",\"target_bot_id\":\"b\",\"target_task_id\":\"8316f70dd06641658f30a408e66a3094\",\"chain_id\":\"2ecffaab353f4932866243bae6c5e5ec\",\"state\":\"succeeded\",\"output\":\"R4 reviewer VERIFIED report\",\"reason\":\"模型完成回答\",\"delivery_task_id\":\"c0604847ea0e494d99ae584193db9fca\",\"created_at\":\"2026-11-01T18:47:15.885935Z\"}",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:15.896118Z",
+        "updated_at": "2026-11-01T18:47:16.336619Z"
+      }
+    ],
+    "durable_runs": [
+      {
+        "id": "3f9d78c40fee4c9c96fd426574976a67",
+        "task_id": "2ecffaab353f4932866243bae6c5e5ec",
+        "session_id": "77c7959035ed453f9b187be4e30d619b",
+        "worker_id": "28550cf082e84280a449b77397b6621a",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 29
+        },
+        "result": {
+          "session_id": "77c7959035ed453f9b187be4e30d619b",
+          "run_id": "3f9d78c40fee4c9c96fd426574976a67",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 completed",
+          "metrics": {
+            "model_requests": 1,
+            "worker_steps": 1,
+            "tool_calls": 0,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 1,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 1,
+            "elapsed_ms": 29
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:14.622502Z",
+        "started_at": "2026-11-01T18:47:14.631263Z",
+        "finished_at": "2026-11-01T18:47:14.691154Z"
+      },
+      {
+        "id": "0f719be681924c38a512ecf415caec57",
+        "task_id": "8316f70dd06641658f30a408e66a3094",
+        "session_id": "547d0b80c685438d82c4dd378204e464",
+        "worker_id": "f65ae3d245704aab8610b453e312732b",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 65
+        },
+        "result": {
+          "session_id": "547d0b80c685438d82c4dd378204e464",
+          "run_id": "0f719be681924c38a512ecf415caec57",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 reviewer VERIFIED report",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 65
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:15.555591Z",
+        "started_at": "2026-11-01T18:47:15.563050Z",
+        "finished_at": "2026-11-01T18:47:15.657838Z"
+      },
+      {
+        "id": "ef48a3950aed4d7d84b1d5eaeb8d8e41",
+        "task_id": "c0604847ea0e494d99ae584193db9fca",
+        "session_id": "f5d50e946cf640a3aa721f8fc44cdee9",
+        "worker_id": "ded4fc539fe849c5937f611e01c3bae8",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 65
+        },
+        "result": {
+          "session_id": "f5d50e946cf640a3aa721f8fc44cdee9",
+          "run_id": "ef48a3950aed4d7d84b1d5eaeb8d8e41",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 received and processed: {\"message_id\":\"5e04b5e9c74d48a19e0eb3f7d659ed60\",\"source_bot_id\":\"a\",\"source_task_id\":\"2ecffaab353f4932866243bae6c5e5ec\",\"target_bot_id\":\"b\",\"target_task_id\":\"8316f70dd06641658f30a408e66a3094\",\"chain_id\":\"2ecffaab353f4932866243bae6c5e5ec\",\"state\":\"succeeded\",\"output\":\"R4 reviewer VERIFIED report\",\"reason\":\"模型完成回答\",\"delivery_task_id\":\"c0604847ea0e494d99ae584193db9fca\",\"created_at\":\"2026-11-01T18:47:15.885935Z\"}",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 65
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:16.201825Z",
+        "started_at": "2026-11-01T18:47:16.215301Z",
+        "finished_at": "2026-11-01T18:47:16.336545Z"
+      }
+    ],
+    "task_chains": [
+      {
+        "id": "2ecffaab353f4932866243bae6c5e5ec",
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 8,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 5,
+          "worker_steps": 5,
+          "tool_calls": 2,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 5,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 5,
+          "elapsed_ms": 159
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "5e04b5e9c74d48a19e0eb3f7d659ed60",
+        "source_bot_id": "a",
+        "source_task_id": "2ecffaab353f4932866243bae6c5e5ec",
+        "target_bot_id": "b",
+        "text": "R4 review",
+        "idempotency_key": "cut",
+        "chain_id": "2ecffaab353f4932866243bae6c5e5ec",
+        "hop": 1,
+        "target_task_id": "8316f70dd06641658f30a408e66a3094",
+        "created_at": "2026-11-01T18:47:15.006289Z"
+      }
+    ],
+    "handoff_results": [
+      {
+        "message_id": "5e04b5e9c74d48a19e0eb3f7d659ed60",
+        "source_bot_id": "a",
+        "source_task_id": "2ecffaab353f4932866243bae6c5e5ec",
+        "target_bot_id": "b",
+        "target_task_id": "8316f70dd06641658f30a408e66a3094",
+        "chain_id": "2ecffaab353f4932866243bae6c5e5ec",
+        "state": "succeeded",
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "delivery_task_id": "c0604847ea0e494d99ae584193db9fca",
+        "created_at": "2026-11-01T18:47:15.885935Z"
+      }
+    ]
+  },
+  "test_process_crash_in_handoff_3": {
+    "durable_tasks": [
+      {
+        "id": "b1802992ee5049cb8ce4f4e3eab51aba",
+        "bot_id": "a",
+        "session_id": "2905fcf8d868467c967460145f38e26e",
+        "text": "R4 finish",
+        "state": "succeeded",
+        "revision": 6,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "b1802992ee5049cb8ce4f4e3eab51aba",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 31
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 completed",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:20.105201Z",
+        "updated_at": "2026-11-01T18:47:20.462297Z"
+      },
+      {
+        "id": "0a33b1b9ef0f4a27b6bd200150cb86b6",
+        "bot_id": "b",
+        "session_id": "72361d75753841f5964cfd914f296816",
+        "text": "R4 review",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff",
+        "idempotency_key": "handoff:f2c5da271cbd413f83a7f02409808579",
+        "chain_id": "b1802992ee5049cb8ce4f4e3eab51aba",
+        "parent_task_id": "b1802992ee5049cb8ce4f4e3eab51aba",
+        "metadata": {
+          "message_id": "f2c5da271cbd413f83a7f02409808579",
+          "source_bot_id": "a",
+          "source_task_id": "b1802992ee5049cb8ce4f4e3eab51aba"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 64
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:20.999046Z",
+        "updated_at": "2026-11-01T18:47:21.389209Z"
+      },
+      {
+        "id": "0c834269f7a44bfc9e8385168854fc64",
+        "bot_id": "a",
+        "session_id": "a2a423f3cbcc40079eef67a3a2297f70",
+        "text": "A Bot handoff result has returned. Read it with read_handoff using message_id f2c5da271cbd413f83a7f02409808579. Original source Task: b1802992ee5049cb8ce4f4e3eab51aba; target Task: 0a33b1b9ef0f4a27b6bd200150cb86b6; status: succeeded.\nResult: R4 reviewer VERIFIED report\nReason: 模型完成回答",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff_result",
+        "idempotency_key": "handoff-result:f2c5da271cbd413f83a7f02409808579",
+        "chain_id": "b1802992ee5049cb8ce4f4e3eab51aba",
+        "parent_task_id": "0a33b1b9ef0f4a27b6bd200150cb86b6",
+        "metadata": {
+          "message_id": "f2c5da271cbd413f83a7f02409808579",
+          "source_task_id": "b1802992ee5049cb8ce4f4e3eab51aba",
+          "target_task_id": "0a33b1b9ef0f4a27b6bd200150cb86b6"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 70
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 received and processed: {\"message_id\":\"f2c5da271cbd413f83a7f02409808579\",\"source_bot_id\":\"a\",\"source_task_id\":\"b1802992ee5049cb8ce4f4e3eab51aba\",\"target_bot_id\":\"b\",\"target_task_id\":\"0a33b1b9ef0f4a27b6bd200150cb86b6\",\"chain_id\":\"b1802992ee5049cb8ce4f4e3eab51aba\",\"state\":\"succeeded\",\"output\":\"R4 reviewer VERIFIED report\",\"reason\":\"模型完成回答\",\"delivery_task_id\":\"0c834269f7a44bfc9e8385168854fc64\",\"created_at\":\"2026-11-01T18:47:21.396751Z\"}",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:21.623953Z",
+        "updated_at": "2026-11-01T18:47:22.016809Z"
+      }
+    ],
+    "durable_runs": [
+      {
+        "id": "045c1795207a42c792a35fa9e6b8ecc5",
+        "task_id": "b1802992ee5049cb8ce4f4e3eab51aba",
+        "session_id": "2905fcf8d868467c967460145f38e26e",
+        "worker_id": "2ef7fae605d34e5dac9c1939e2d8db6c",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 31
+        },
+        "result": {
+          "session_id": "2905fcf8d868467c967460145f38e26e",
+          "run_id": "045c1795207a42c792a35fa9e6b8ecc5",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 completed",
+          "metrics": {
+            "model_requests": 1,
+            "worker_steps": 1,
+            "tool_calls": 0,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 1,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 1,
+            "elapsed_ms": 31
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:20.373885Z",
+        "started_at": "2026-11-01T18:47:20.387407Z",
+        "finished_at": "2026-11-01T18:47:20.462235Z"
+      },
+      {
+        "id": "136506939a544a89a55e3607c83dee14",
+        "task_id": "0a33b1b9ef0f4a27b6bd200150cb86b6",
+        "session_id": "72361d75753841f5964cfd914f296816",
+        "worker_id": "5c8cb4b2424744db81886656dc02ffdd",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 64
+        },
+        "result": {
+          "session_id": "72361d75753841f5964cfd914f296816",
+          "run_id": "136506939a544a89a55e3607c83dee14",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 reviewer VERIFIED report",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 64
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:21.282671Z",
+        "started_at": "2026-11-01T18:47:21.293433Z",
+        "finished_at": "2026-11-01T18:47:21.389150Z"
+      },
+      {
+        "id": "6c5a150310324b3fa07318ee0ff57d79",
+        "task_id": "0c834269f7a44bfc9e8385168854fc64",
+        "session_id": "a2a423f3cbcc40079eef67a3a2297f70",
+        "worker_id": "cbc1259fda5e4d34a2b706736272ffcd",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 70
+        },
+        "result": {
+          "session_id": "a2a423f3cbcc40079eef67a3a2297f70",
+          "run_id": "6c5a150310324b3fa07318ee0ff57d79",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 received and processed: {\"message_id\":\"f2c5da271cbd413f83a7f02409808579\",\"source_bot_id\":\"a\",\"source_task_id\":\"b1802992ee5049cb8ce4f4e3eab51aba\",\"target_bot_id\":\"b\",\"target_task_id\":\"0a33b1b9ef0f4a27b6bd200150cb86b6\",\"chain_id\":\"b1802992ee5049cb8ce4f4e3eab51aba\",\"state\":\"succeeded\",\"output\":\"R4 reviewer VERIFIED report\",\"reason\":\"模型完成回答\",\"delivery_task_id\":\"0c834269f7a44bfc9e8385168854fc64\",\"created_at\":\"2026-11-01T18:47:21.396751Z\"}",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 70
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:21.908180Z",
+        "started_at": "2026-11-01T18:47:21.914961Z",
+        "finished_at": "2026-11-01T18:47:22.016744Z"
+      }
+    ],
+    "task_chains": [
+      {
+        "id": "b1802992ee5049cb8ce4f4e3eab51aba",
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 8,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 5,
+          "worker_steps": 5,
+          "tool_calls": 2,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 5,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 5,
+          "elapsed_ms": 165
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "f2c5da271cbd413f83a7f02409808579",
+        "source_bot_id": "a",
+        "source_task_id": "b1802992ee5049cb8ce4f4e3eab51aba",
+        "target_bot_id": "b",
+        "text": "R4 review",
+        "idempotency_key": "cut",
+        "chain_id": "b1802992ee5049cb8ce4f4e3eab51aba",
+        "hop": 1,
+        "target_task_id": "0a33b1b9ef0f4a27b6bd200150cb86b6",
+        "created_at": "2026-11-01T18:47:20.735574Z"
+      }
+    ],
+    "handoff_results": [
+      {
+        "message_id": "f2c5da271cbd413f83a7f02409808579",
+        "source_bot_id": "a",
+        "source_task_id": "b1802992ee5049cb8ce4f4e3eab51aba",
+        "target_bot_id": "b",
+        "target_task_id": "0a33b1b9ef0f4a27b6bd200150cb86b6",
+        "chain_id": "b1802992ee5049cb8ce4f4e3eab51aba",
+        "state": "succeeded",
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "delivery_task_id": "0c834269f7a44bfc9e8385168854fc64",
+        "created_at": "2026-11-01T18:47:21.396751Z"
+      }
+    ]
+  },
+  "test_process_crash_in_handoff_4": {
+    "durable_tasks": [
+      {
+        "id": "e1fc58e1f7ef424098eac6b37e8dcb3f",
+        "bot_id": "a",
+        "session_id": "ad87e15599ba47189f4293b39486c2c0",
+        "text": "R4 finish",
+        "state": "succeeded",
+        "revision": 6,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "e1fc58e1f7ef424098eac6b37e8dcb3f",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 30
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 completed",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:25.851976Z",
+        "updated_at": "2026-11-01T18:47:26.191685Z"
+      },
+      {
+        "id": "2f1cf72e91314145bd0aeda0a3000e38",
+        "bot_id": "b",
+        "session_id": "e11480b5f84b47b98308e54e1811dcf4",
+        "text": "R4 review",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff",
+        "idempotency_key": "handoff:5f0fe90f83b64f2790e76220a80b1aa6",
+        "chain_id": "e1fc58e1f7ef424098eac6b37e8dcb3f",
+        "parent_task_id": "e1fc58e1f7ef424098eac6b37e8dcb3f",
+        "metadata": {
+          "message_id": "5f0fe90f83b64f2790e76220a80b1aa6",
+          "source_bot_id": "a",
+          "source_task_id": "e1fc58e1f7ef424098eac6b37e8dcb3f"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 65
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:26.732599Z",
+        "updated_at": "2026-11-01T18:47:27.115496Z"
+      },
+      {
+        "id": "1e10250d555c4cdfb2d0cd8bc8129946",
+        "bot_id": "a",
+        "session_id": "7a445b5e1ac94abe8ec572b95f54acc1",
+        "text": "A Bot handoff result has returned. Read it with read_handoff using message_id 5f0fe90f83b64f2790e76220a80b1aa6. Original source Task: e1fc58e1f7ef424098eac6b37e8dcb3f; target Task: 2f1cf72e91314145bd0aeda0a3000e38; status: succeeded.\nResult: R4 reviewer VERIFIED report\nReason: 模型完成回答",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff_result",
+        "idempotency_key": "handoff-result:5f0fe90f83b64f2790e76220a80b1aa6",
+        "chain_id": "e1fc58e1f7ef424098eac6b37e8dcb3f",
+        "parent_task_id": "2f1cf72e91314145bd0aeda0a3000e38",
+        "metadata": {
+          "message_id": "5f0fe90f83b64f2790e76220a80b1aa6",
+          "source_task_id": "e1fc58e1f7ef424098eac6b37e8dcb3f",
+          "target_task_id": "2f1cf72e91314145bd0aeda0a3000e38"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 66
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 received and processed: {\"message_id\":\"5f0fe90f83b64f2790e76220a80b1aa6\",\"source_bot_id\":\"a\",\"source_task_id\":\"e1fc58e1f7ef424098eac6b37e8dcb3f\",\"target_bot_id\":\"b\",\"target_task_id\":\"2f1cf72e91314145bd0aeda0a3000e38\",\"chain_id\":\"e1fc58e1f7ef424098eac6b37e8dcb3f\",\"state\":\"succeeded\",\"output\":\"R4 reviewer VERIFIED report\",\"reason\":\"模型完成回答\",\"delivery_task_id\":\"1e10250d555c4cdfb2d0cd8bc8129946\",\"created_at\":\"2026-11-01T18:47:27.123721Z\"}",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:27.130783Z",
+        "updated_at": "2026-11-01T18:47:27.812324Z"
+      }
+    ],
+    "durable_runs": [
+      {
+        "id": "ed5621980e51467ea4b387649597213c",
+        "task_id": "e1fc58e1f7ef424098eac6b37e8dcb3f",
+        "session_id": "ad87e15599ba47189f4293b39486c2c0",
+        "worker_id": "58d196315e304a5da5379c1584058565",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 30
+        },
+        "result": {
+          "session_id": "ad87e15599ba47189f4293b39486c2c0",
+          "run_id": "ed5621980e51467ea4b387649597213c",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 completed",
+          "metrics": {
+            "model_requests": 1,
+            "worker_steps": 1,
+            "tool_calls": 0,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 1,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 1,
+            "elapsed_ms": 30
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:26.116644Z",
+        "started_at": "2026-11-01T18:47:26.126358Z",
+        "finished_at": "2026-11-01T18:47:26.191625Z"
+      },
+      {
+        "id": "90947bbfdb9f4a40a4ba4d72f78b4256",
+        "task_id": "2f1cf72e91314145bd0aeda0a3000e38",
+        "session_id": "e11480b5f84b47b98308e54e1811dcf4",
+        "worker_id": "67ac8038387b453a811c3df950f07646",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 65
+        },
+        "result": {
+          "session_id": "e11480b5f84b47b98308e54e1811dcf4",
+          "run_id": "90947bbfdb9f4a40a4ba4d72f78b4256",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 reviewer VERIFIED report",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 65
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:27.014403Z",
+        "started_at": "2026-11-01T18:47:27.021460Z",
+        "finished_at": "2026-11-01T18:47:27.115407Z"
+      },
+      {
+        "id": "7c932f47a5604b8f84ee727862deb6a4",
+        "task_id": "1e10250d555c4cdfb2d0cd8bc8129946",
+        "session_id": "7a445b5e1ac94abe8ec572b95f54acc1",
+        "worker_id": "47fc1a3a661746c8adef534ba37ebe2c",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 66
+        },
+        "result": {
+          "session_id": "7a445b5e1ac94abe8ec572b95f54acc1",
+          "run_id": "7c932f47a5604b8f84ee727862deb6a4",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 received and processed: {\"message_id\":\"5f0fe90f83b64f2790e76220a80b1aa6\",\"source_bot_id\":\"a\",\"source_task_id\":\"e1fc58e1f7ef424098eac6b37e8dcb3f\",\"target_bot_id\":\"b\",\"target_task_id\":\"2f1cf72e91314145bd0aeda0a3000e38\",\"chain_id\":\"e1fc58e1f7ef424098eac6b37e8dcb3f\",\"state\":\"succeeded\",\"output\":\"R4 reviewer VERIFIED report\",\"reason\":\"模型完成回答\",\"delivery_task_id\":\"1e10250d555c4cdfb2d0cd8bc8129946\",\"created_at\":\"2026-11-01T18:47:27.123721Z\"}",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 66
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:27.708182Z",
+        "started_at": "2026-11-01T18:47:27.715114Z",
+        "finished_at": "2026-11-01T18:47:27.812170Z"
+      }
+    ],
+    "task_chains": [
+      {
+        "id": "e1fc58e1f7ef424098eac6b37e8dcb3f",
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 8,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 5,
+          "worker_steps": 5,
+          "tool_calls": 2,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 5,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 5,
+          "elapsed_ms": 161
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "5f0fe90f83b64f2790e76220a80b1aa6",
+        "source_bot_id": "a",
+        "source_task_id": "e1fc58e1f7ef424098eac6b37e8dcb3f",
+        "target_bot_id": "b",
+        "text": "R4 review",
+        "idempotency_key": "cut",
+        "chain_id": "e1fc58e1f7ef424098eac6b37e8dcb3f",
+        "hop": 1,
+        "target_task_id": "2f1cf72e91314145bd0aeda0a3000e38",
+        "created_at": "2026-11-01T18:47:26.459923Z"
+      }
+    ],
+    "handoff_results": [
+      {
+        "message_id": "5f0fe90f83b64f2790e76220a80b1aa6",
+        "source_bot_id": "a",
+        "source_task_id": "e1fc58e1f7ef424098eac6b37e8dcb3f",
+        "target_bot_id": "b",
+        "target_task_id": "2f1cf72e91314145bd0aeda0a3000e38",
+        "chain_id": "e1fc58e1f7ef424098eac6b37e8dcb3f",
+        "state": "succeeded",
+        "output": "R4 reviewer VERIFIED report",
+        "reason": "模型完成回答",
+        "delivery_task_id": "1e10250d555c4cdfb2d0cd8bc8129946",
+        "created_at": "2026-11-01T18:47:27.123721Z"
+      }
+    ]
+  },
+  "test_terminal_result_and_recip0": {
+    "durable_tasks": [
+      {
+        "id": "1670354f604d4b3fab54ef91f9976634",
+        "bot_id": "a",
+        "session_id": "597b2ef0e4734e77b5f47d4e9ccd5c0c",
+        "text": "R4 finish",
+        "state": "succeeded",
+        "revision": 6,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "1670354f604d4b3fab54ef91f9976634",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 33
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 completed",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:35.503800Z",
+        "updated_at": "2026-11-01T18:47:35.861962Z"
+      },
+      {
+        "id": "65b46099ed074cbe91fe6a204a0b9967",
+        "bot_id": "b",
+        "session_id": "945a1bafb63c45249e241d0f6c510cd1",
+        "text": "R4 forbidden",
+        "state": "cancelled",
+        "revision": 2,
+        "source": "handoff",
+        "idempotency_key": "handoff:0ce3ce30632443f486202f47e9a18c12",
+        "chain_id": "1670354f604d4b3fab54ef91f9976634",
+        "parent_task_id": "1670354f604d4b3fab54ef91f9976634",
+        "metadata": {
+          "message_id": "0ce3ce30632443f486202f47e9a18c12",
+          "source_bot_id": "a",
+          "source_task_id": "1670354f604d4b3fab54ef91f9976634"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 0,
+          "worker_steps": 0,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 0,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 0,
+          "elapsed_ms": 0
+        },
+        "active_run_id": null,
+        "cancel_requested": true,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "",
+        "reason": "任务已取消",
+        "created_at": "2026-11-01T18:47:36.456217Z",
+        "updated_at": "2026-11-01T18:47:36.970961Z"
+      },
+      {
+        "id": "409730756ee24ed58e074d830b2e6a3c",
+        "bot_id": "a",
+        "session_id": "7452f55bafc44fca8bc5e6912474457e",
+        "text": "A Bot handoff result has returned. Read it with read_handoff using message_id 0ce3ce30632443f486202f47e9a18c12. Original source Task: 1670354f604d4b3fab54ef91f9976634; target Task: 65b46099ed074cbe91fe6a204a0b9967; status: cancelled.\nResult: \nReason: 任务已取消",
+        "state": "succeeded",
+        "revision": 9,
+        "source": "handoff_result",
+        "idempotency_key": "handoff-result:0ce3ce30632443f486202f47e9a18c12",
+        "chain_id": "1670354f604d4b3fab54ef91f9976634",
+        "parent_task_id": "65b46099ed074cbe91fe6a204a0b9967",
+        "metadata": {
+          "message_id": "0ce3ce30632443f486202f47e9a18c12",
+          "source_task_id": "1670354f604d4b3fab54ef91f9976634",
+          "target_task_id": "65b46099ed074cbe91fe6a204a0b9967"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 66
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 received and processed: {\"message_id\":\"0ce3ce30632443f486202f47e9a18c12\",\"source_bot_id\":\"a\",\"source_task_id\":\"1670354f604d4b3fab54ef91f9976634\",\"target_bot_id\":\"b\",\"target_task_id\":\"65b46099ed074cbe91fe6a204a0b9967\",\"chain_id\":\"1670354f604d4b3fab54ef91f9976634\",\"state\":\"cancelled\",\"output\":\"\",\"reason\":\"任务已取消\",\"delivery_task_id\":\"409730756ee24ed58e074d830b2e6a3c\",\"created_at\":\"2026-11-01T18:47:37.241726Z\"}",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:37.249977Z",
+        "updated_at": "2026-11-01T18:47:37.384732Z"
+      }
+    ],
+    "durable_runs": [
+      {
+        "id": "ec73268ef3984fe891626bd69e815f54",
+        "task_id": "1670354f604d4b3fab54ef91f9976634",
+        "session_id": "597b2ef0e4734e77b5f47d4e9ccd5c0c",
+        "worker_id": "0597dcdcc5e74621b394263778976390",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 33
+        },
+        "result": {
+          "session_id": "597b2ef0e4734e77b5f47d4e9ccd5c0c",
+          "run_id": "ec73268ef3984fe891626bd69e815f54",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 completed",
+          "metrics": {
+            "model_requests": 1,
+            "worker_steps": 1,
+            "tool_calls": 0,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 1,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 1,
+            "elapsed_ms": 33
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:35.776567Z",
+        "started_at": "2026-11-01T18:47:35.786121Z",
+        "finished_at": "2026-11-01T18:47:35.861900Z"
+      },
+      {
+        "id": "a7f6b0cf80604f52a2527bdf7d6d6dfe",
+        "task_id": "409730756ee24ed58e074d830b2e6a3c",
+        "session_id": "7452f55bafc44fca8bc5e6912474457e",
+        "worker_id": "e60575f76dfb4b26b2489ead473874e9",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 66
+        },
+        "result": {
+          "session_id": "7452f55bafc44fca8bc5e6912474457e",
+          "run_id": "a7f6b0cf80604f52a2527bdf7d6d6dfe",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 received and processed: {\"message_id\":\"0ce3ce30632443f486202f47e9a18c12\",\"source_bot_id\":\"a\",\"source_task_id\":\"1670354f604d4b3fab54ef91f9976634\",\"target_bot_id\":\"b\",\"target_task_id\":\"65b46099ed074cbe91fe6a204a0b9967\",\"chain_id\":\"1670354f604d4b3fab54ef91f9976634\",\"state\":\"cancelled\",\"output\":\"\",\"reason\":\"任务已取消\",\"delivery_task_id\":\"409730756ee24ed58e074d830b2e6a3c\",\"created_at\":\"2026-11-01T18:47:37.241726Z\"}",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 66
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:37.282319Z",
+        "started_at": "2026-11-01T18:47:37.288852Z",
+        "finished_at": "2026-11-01T18:47:37.384666Z"
+      }
+    ],
+    "task_chains": [
+      {
+        "id": "1670354f604d4b3fab54ef91f9976634",
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 8,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 3,
+          "worker_steps": 3,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 3,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 3,
+          "elapsed_ms": 99
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "0ce3ce30632443f486202f47e9a18c12",
+        "source_bot_id": "a",
+        "source_task_id": "1670354f604d4b3fab54ef91f9976634",
+        "target_bot_id": "b",
+        "text": "R4 forbidden",
+        "idempotency_key": "bad",
+        "chain_id": "1670354f604d4b3fab54ef91f9976634",
+        "hop": 1,
+        "target_task_id": "65b46099ed074cbe91fe6a204a0b9967",
+        "created_at": "2026-11-01T18:47:36.157105Z"
+      }
+    ],
+    "handoff_results": [
+      {
+        "message_id": "0ce3ce30632443f486202f47e9a18c12",
+        "source_bot_id": "a",
+        "source_task_id": "1670354f604d4b3fab54ef91f9976634",
+        "target_bot_id": "b",
+        "target_task_id": "65b46099ed074cbe91fe6a204a0b9967",
+        "chain_id": "1670354f604d4b3fab54ef91f9976634",
+        "state": "cancelled",
+        "output": "",
+        "reason": "任务已取消",
+        "delivery_task_id": "409730756ee24ed58e074d830b2e6a3c",
+        "created_at": "2026-11-01T18:47:37.241726Z"
+      }
+    ]
+  },
+  "test_terminal_result_and_recip1": {
+    "durable_tasks": [
+      {
+        "id": "544d840769fa437eae0d51490669abc5",
+        "bot_id": "a",
+        "session_id": "7894631c238a46cd9cbfb48fab0af8b2",
+        "text": "R4 finish",
+        "state": "succeeded",
+        "revision": 6,
+        "source": "manual",
+        "idempotency_key": null,
+        "chain_id": "544d840769fa437eae0d51490669abc5",
+        "parent_task_id": null,
+        "metadata": {},
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 52
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 completed",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:40.633878Z",
+        "updated_at": "2026-11-01T18:47:41.050366Z"
+      },
+      {
+        "id": "108a1d85040a4293a8f86d23894b1bd3",
+        "bot_id": "b",
+        "session_id": "c89938480ad549a797d30ad4329df73b",
+        "text": "R4 forbidden",
+        "state": "failed",
+        "revision": 9,
+        "source": "handoff",
+        "idempotency_key": "handoff:469db7e8a08d4e41af679f165d09b864",
+        "chain_id": "544d840769fa437eae0d51490669abc5",
+        "parent_task_id": "544d840769fa437eae0d51490669abc5",
+        "metadata": {
+          "message_id": "469db7e8a08d4e41af679f165d09b864",
+          "source_bot_id": "a",
+          "source_task_id": "544d840769fa437eae0d51490669abc5"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 1,
+          "tool_errors": 1,
+          "permission_denials": 1,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 66
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "",
+        "reason": "持久任务工具失败: permission_denied: Bot 未授权此工具。",
+        "created_at": "2026-11-01T18:47:41.646229Z",
+        "updated_at": "2026-11-01T18:47:42.342938Z"
+      },
+      {
+        "id": "d38213b303984a4fa04dd134df86d56f",
+        "bot_id": "a",
+        "session_id": "850096973c4f43a78c20a047ff85bb2b",
+        "text": "A Bot handoff result has returned. Read it with read_handoff using message_id 469db7e8a08d4e41af679f165d09b864. Original source Task: 544d840769fa437eae0d51490669abc5; target Task: 108a1d85040a4293a8f86d23894b1bd3; status: failed.\nResult: \nReason: 持久任务工具失败: permission_denied: Bot 未授权此工具。",
+        "state": "succeeded",
+        "revision": 10,
+        "source": "handoff_result",
+        "idempotency_key": "handoff-result:469db7e8a08d4e41af679f165d09b864",
+        "chain_id": "544d840769fa437eae0d51490669abc5",
+        "parent_task_id": "108a1d85040a4293a8f86d23894b1bd3",
+        "metadata": {
+          "message_id": "469db7e8a08d4e41af679f165d09b864",
+          "source_task_id": "544d840769fa437eae0d51490669abc5",
+          "target_task_id": "108a1d85040a4293a8f86d23894b1bd3"
+        },
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "cumulative_metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 133
+        },
+        "active_run_id": null,
+        "cancel_requested": false,
+        "pending_operation": null,
+        "interaction_id": null,
+        "output": "R4 received and processed: {\"message_id\":\"469db7e8a08d4e41af679f165d09b864\",\"source_bot_id\":\"a\",\"source_task_id\":\"544d840769fa437eae0d51490669abc5\",\"target_bot_id\":\"b\",\"target_task_id\":\"108a1d85040a4293a8f86d23894b1bd3\",\"chain_id\":\"544d840769fa437eae0d51490669abc5\",\"state\":\"failed\",\"output\":\"\",\"reason\":\"持久任务工具失败: permission_denied: Bot 未授权此工具。\",\"delivery_task_id\":\"d38213b303984a4fa04dd134df86d56f\",\"created_at\":\"2026-11-01T18:47:42.356306Z\"}",
+        "reason": "模型完成回答",
+        "created_at": "2026-11-01T18:47:42.393362Z",
+        "updated_at": "2026-11-01T18:47:42.902986Z"
+      }
+    ],
+    "durable_runs": [
+      {
+        "id": "e36062a07c344da1a6963b0a5eba2d0c",
+        "task_id": "544d840769fa437eae0d51490669abc5",
+        "session_id": "7894631c238a46cd9cbfb48fab0af8b2",
+        "worker_id": "2a63ae8570aa447dbd5a569da46ff17e",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 0,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 52
+        },
+        "result": {
+          "session_id": "7894631c238a46cd9cbfb48fab0af8b2",
+          "run_id": "e36062a07c344da1a6963b0a5eba2d0c",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 completed",
+          "metrics": {
+            "model_requests": 1,
+            "worker_steps": 1,
+            "tool_calls": 0,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 1,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 1,
+            "elapsed_ms": 52
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:40.931384Z",
+        "started_at": "2026-11-01T18:47:40.943340Z",
+        "finished_at": "2026-11-01T18:47:41.050301Z"
+      },
+      {
+        "id": "7ce4807db8ff43f3aa2f0046f0507370",
+        "task_id": "108a1d85040a4293a8f86d23894b1bd3",
+        "session_id": "c89938480ad549a797d30ad4329df73b",
+        "worker_id": "673e8050e54d4084b3ad3bbdb826b6c3",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 1,
+          "worker_steps": 1,
+          "tool_calls": 1,
+          "tool_errors": 1,
+          "permission_denials": 1,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 1,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 1,
+          "elapsed_ms": 66
+        },
+        "result": {
+          "session_id": "c89938480ad549a797d30ad4329df73b",
+          "run_id": "7ce4807db8ff43f3aa2f0046f0507370",
+          "status": "failed",
+          "reason": "持久任务工具失败: permission_denied: Bot 未授权此工具。",
+          "output": "",
+          "metrics": {
+            "model_requests": 1,
+            "worker_steps": 1,
+            "tool_calls": 1,
+            "tool_errors": 1,
+            "permission_denials": 1,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 1,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 1,
+            "elapsed_ms": 66
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:42.225189Z",
+        "started_at": "2026-11-01T18:47:42.233965Z",
+        "finished_at": "2026-11-01T18:47:42.342879Z"
+      },
+      {
+        "id": "703d211cb2b4442a871d66a73d1b93ba",
+        "task_id": "d38213b303984a4fa04dd134df86d56f",
+        "session_id": "850096973c4f43a78c20a047ff85bb2b",
+        "worker_id": "298721ce3d944e9a91943458cd372986",
+        "state": "finished",
+        "metrics": {
+          "model_requests": 2,
+          "worker_steps": 2,
+          "tool_calls": 1,
+          "tool_errors": 0,
+          "permission_denials": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 2,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 2,
+          "elapsed_ms": 133
+        },
+        "result": {
+          "session_id": "850096973c4f43a78c20a047ff85bb2b",
+          "run_id": "703d211cb2b4442a871d66a73d1b93ba",
+          "status": "completed",
+          "reason": "模型完成回答",
+          "output": "R4 received and processed: {\"message_id\":\"469db7e8a08d4e41af679f165d09b864\",\"source_bot_id\":\"a\",\"source_task_id\":\"544d840769fa437eae0d51490669abc5\",\"target_bot_id\":\"b\",\"target_task_id\":\"108a1d85040a4293a8f86d23894b1bd3\",\"chain_id\":\"544d840769fa437eae0d51490669abc5\",\"state\":\"failed\",\"output\":\"\",\"reason\":\"持久任务工具失败: permission_denied: Bot 未授权此工具。\",\"delivery_task_id\":\"d38213b303984a4fa04dd134df86d56f\",\"created_at\":\"2026-11-01T18:47:42.356306Z\"}",
+          "metrics": {
+            "model_requests": 2,
+            "worker_steps": 2,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "permission_denials": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "usage_missing": 2,
+            "cached_input_tokens": 0,
+            "cache_reported_input_tokens": 0,
+            "cache_usage_missing": 2,
+            "elapsed_ms": 133
+          },
+          "persistence_failed": false
+        },
+        "created_at": "2026-11-01T18:47:42.713815Z",
+        "started_at": "2026-11-01T18:47:42.722439Z",
+        "finished_at": "2026-11-01T18:47:42.902923Z"
+      }
+    ],
+    "task_chains": [
+      {
+        "id": "544d840769fa437eae0d51490669abc5",
+        "budget": {
+          "max_model_requests": 100,
+          "max_tool_calls": 100,
+          "timeout_seconds": 600.0
+        },
+        "max_hops": 8,
+        "hops_used": 1,
+        "cumulative_metrics": {
+          "model_requests": 4,
+          "worker_steps": 4,
+          "tool_calls": 2,
+          "tool_errors": 1,
+          "permission_denials": 1,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "usage_missing": 4,
+          "cached_input_tokens": 0,
+          "cache_reported_input_tokens": 0,
+          "cache_usage_missing": 4,
+          "elapsed_ms": 251
+        }
+      }
+    ],
+    "handoff_messages": [
+      {
+        "id": "469db7e8a08d4e41af679f165d09b864",
+        "source_bot_id": "a",
+        "source_task_id": "544d840769fa437eae0d51490669abc5",
+        "target_bot_id": "b",
+        "text": "R4 forbidden",
+        "idempotency_key": "bad",
+        "chain_id": "544d840769fa437eae0d51490669abc5",
+        "hop": 1,
+        "target_task_id": "108a1d85040a4293a8f86d23894b1bd3",
+        "created_at": "2026-11-01T18:47:41.356784Z"
+      }
+    ],
+    "handoff_results": [
+      {
+        "message_id": "469db7e8a08d4e41af679f165d09b864",
+        "source_bot_id": "a",
+        "source_task_id": "544d840769fa437eae0d51490669abc5",
+        "target_bot_id": "b",
+        "target_task_id": "108a1d85040a4293a8f86d23894b1bd3",
+        "chain_id": "544d840769fa437eae0d51490669abc5",
+        "state": "failed",
+        "output": "",
+        "reason": "持久任务工具失败: permission_denied: Bot 未授权此工具。",
+        "delivery_task_id": "d38213b303984a4fa04dd134df86d56f",
+        "created_at": "2026-11-01T18:47:42.356306Z"
+      }
+    ]
+  }
+}

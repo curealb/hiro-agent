@@ -31,6 +31,7 @@ from hiro_agent.errors import (
     ModelError,
     PersistenceError,
     RunCancelled,
+    RunSuspended,
 )
 from hiro_agent.execution import cancellable
 from hiro_agent.session import delegation_terminal_event, settle_tool_calls
@@ -139,6 +140,7 @@ class Agent:
                 role=self._scope.role,
                 task_id=self._scope.call_id,
                 child_session_id=self.session.session_id if self._scope.call_id else None,
+                persistent_task_id=self._scope.persistent_task_id,
             )
         return data
 
@@ -191,6 +193,9 @@ class Agent:
                         },
                         run_id,
                     )
+                if scope.prepare is not None:
+                    self._check(budget)
+                    await scope.prepare()
                 while True:
                     self._check(budget)
                     request = ModelRequest(
@@ -281,7 +286,7 @@ class Agent:
                     await self.tools.execute_many(calls, run_id, budget, self._cancellation)
             except (RunCancelled, asyncio.CancelledError):
                 status, reason = RunStatus.CANCELED, "用户取消；已停止启动新工具"
-            except (BudgetExceeded, ContextLimitError) as exc:
+            except (BudgetExceeded, ContextLimitError, RunSuspended) as exc:
                 status, reason = RunStatus.PAUSED, str(exc)
             except PersistenceError:
                 persistence_failed = self._broken = True
@@ -306,7 +311,7 @@ class Agent:
                     await self.session.append(
                         "run.checkpoint", {"status": status.value, "reason": reason}, run_id
                     )
-                    final_metrics = budget.finish()
+                    final_metrics = budget.seal()
                     await self.session.append(
                         "run.ended",
                         {

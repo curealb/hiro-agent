@@ -8,13 +8,14 @@ import os
 import signal
 import stat
 import tempfile
-from collections.abc import Callable, Coroutine, Iterable, Iterator
+from collections.abc import Awaitable, Callable, Coroutine, Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any, Literal, cast
 
 from pydantic import BaseModel, Field, ValidationError
 
+from hiro_agent.bots import AuthorityProvider, BotAuthority
 from hiro_agent.budget import Budget
 from hiro_agent.config import ToolsConfig
 from hiro_agent.contracts import (
@@ -27,12 +28,20 @@ from hiro_agent.contracts import (
     ToolExecutionContext,
     ToolResult,
 )
-from hiro_agent.errors import BudgetExceeded, PersistenceError, RunCancelled, ToolError
+from hiro_agent.errors import (
+    BudgetExceeded,
+    HiroError,
+    PersistenceError,
+    RunCancelled,
+    RunSuspended,
+    ToolError,
+)
 from hiro_agent.execution import cancellable
 from hiro_agent.session import delegation_terminal_event
 
 ToolHandler = Callable[[Any], Coroutine[Any, Any, Any]]
 ContextualToolHandler = Callable[[Any, ToolExecutionContext], Coroutine[Any, Any, Any]]
+ToolGate = Callable[[ToolCall, dict[str, Any], bool, str], Awaitable[bool]]
 PathArgument = Annotated[str, Field(min_length=1, max_length=4096)]
 CommandArgument = Annotated[str, Field(max_length=16384)]
 _IGNORED = frozenset(
@@ -81,6 +90,10 @@ class ToolOutput:
 @dataclass
 class _WalkState:
     truncated: bool = False
+
+
+class _AuthorityChanged(Exception):
+    pass
 
 
 class ToolRegistry:
@@ -153,17 +166,32 @@ class ToolExecutor:
         observer: Observer | None = None,
         *,
         max_concurrency: int = 2,
+        authority: AuthorityProvider | None = None,
+        gate: ToolGate | None = None,
     ) -> None:
         self.registry = registry
         self.session = session
         self.permission = permission
         self.observer = observer
+        self.authority = authority
+        self.gate = gate
         if not 1 <= max_concurrency <= 8:
             raise ValueError("max_concurrency must be between 1 and 8")
         self.max_concurrency = max_concurrency
 
     def schemas(self) -> list[dict[str, Any]]:
-        return self.registry.schemas()
+        authority = self.authority() if self.authority is not None else None
+        if authority is None:
+            return self.registry.schemas()
+        return self.registry.restricted(
+            name
+            for name, definition in self.registry.definitions.items()
+            if authority.allows(name, mutating=definition.mutating)
+        ).schemas()
+
+    def _verify_authority(self, expected: BotAuthority | None) -> None:
+        if self.authority is not None and self.authority() != expected:
+            raise _AuthorityChanged
 
     async def execute_many(
         self, calls: list[ToolCall], run_id: str, budget: Budget, cancellation: Cancellation
@@ -291,12 +319,24 @@ class ToolExecutor:
             called = True
             cancellation.check()
             definition = self.registry.definitions.get(call.name)
+            authority = self.authority() if self.authority is not None else None
             if definition is None:
                 result = ToolResult(
                     call_id=call.id,
                     ok=False,
                     error="unknown_tool",
                     message=f"未知工具: {call.name}",
+                    outcome="not_started",
+                )
+            elif authority is not None and not authority.allows(
+                call.name, mutating=definition.mutating
+            ):
+                budget.record(permission_denials=1)
+                result = ToolResult(
+                    call_id=call.id,
+                    ok=False,
+                    error="permission_denied",
+                    message="Bot 未授权此工具。",
                     outcome="not_started",
                 )
             else:
@@ -312,12 +352,18 @@ class ToolExecutor:
                         outcome="not_started",
                     )
                 else:
-                    approved = await cancellable(
-                        self.permission.approve(
-                            call.name, arguments.model_dump(mode="json"), definition.mutating
-                        ),
-                        cancellation,
-                        budget.remaining,
+                    approved = (
+                        await self.gate(
+                            call, arguments.model_dump(mode="json"), definition.mutating, run_id
+                        )
+                        if self.gate is not None
+                        else await cancellable(
+                            self.permission.approve(
+                                call.name, arguments.model_dump(mode="json"), definition.mutating
+                            ),
+                            cancellation,
+                            budget.remaining,
+                        )
                     )
                     if not approved:
                         budget.record(permission_denials=1)
@@ -331,8 +377,15 @@ class ToolExecutor:
                     else:
                         budget.check()
                         cancellation.check()
-                        await self._record("tool.started", call_data, run_id)
+                        self._verify_authority(authority)
+                        start_data = dict(call_data)
+                        if authority is not None:
+                            start_data["authority"] = authority.model_dump(mode="json")
+                        await self._record("tool.started", start_data, run_id)
                         started = True
+                        # The durable append yields; revocation during that await
+                        # must also stop the handler before it produces effects.
+                        self._verify_authority(authority)
                         if definition.contextual:
                             context = ToolExecutionContext(
                                 session=self.session,
@@ -340,6 +393,7 @@ class ToolExecutor:
                                 call_id=call.id,
                                 budget=budget,
                                 cancellation=cancellation,
+                                authority=self.authority,
                             )
                             operation = cast(ContextualToolHandler, definition.handler)(
                                 arguments, context
@@ -356,7 +410,16 @@ class ToolExecutor:
                             message=output.message,
                             outcome=output.outcome,
                         )
-        except PersistenceError:
+        except _AuthorityChanged:
+            budget.record(permission_denials=1)
+            result = ToolResult(
+                call_id=call.id,
+                ok=False,
+                error="permission_changed",
+                message="Bot 权限已变化，本次调用未执行，请重新授权。",
+                outcome="not_started",
+            )
+        except (PersistenceError, RunSuspended):
             raise
         except (RunCancelled, BudgetExceeded, asyncio.CancelledError) as exc:
             if not called:
@@ -392,6 +455,8 @@ class ToolExecutor:
         if not result.ok:
             budget.record(tool_errors=1)
         await self._record("tool.result", result.model_dump(mode="json"), run_id)
+        if self.gate is not None and not result.ok:
+            raise HiroError(f"持久任务工具失败: {result.error}: {result.message}")
         return result
 
 

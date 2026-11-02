@@ -755,6 +755,8 @@ def _recovered_metrics(events: list[SessionEvent], run_id: str) -> RunMetrics:
             case "model.requested":
                 metrics.model_requests += 1
             case "assistant.message":
+                if event.data.get("prepared_operation") is True:
+                    continue
                 usage = (
                     Usage.model_validate(event.data["usage"])
                     if event.data.get("usage") is not None
@@ -805,6 +807,63 @@ async def recover_session(session: SessionService) -> list[ToolResult]:
         return await _recover_session(session)
     async with lock:
         return await _recover_session(session)
+
+
+def read_session_snapshot(workspace: Path, session_id: str) -> list[SessionEvent]:
+    """Inspect complete records in a live journal without locking or changing it.
+
+    The initial file size bounds the read even while a writer keeps appending.
+    A final record without its newline is uncommitted for this display snapshot,
+    including a syntactically complete JSON object. This API is never recovery
+    evidence: callers making execution decisions must use the locked reader.
+    """
+    session_id = _session_id(session_id)
+    descriptors: list[int] = []
+    try:
+        workspace_fd = os.open(Path(workspace).resolve(), os.O_RDONLY | os.O_DIRECTORY)
+        descriptors.append(workspace_fd)
+        parent_fd = os.open(
+            ".hiro-agent", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=workspace_fd
+        )
+        descriptors.append(parent_fd)
+        directory_fd = os.open(
+            "sessions", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd
+        )
+        descriptors.append(directory_fd)
+        journal_fd = os.open(
+            f"{session_id}.jsonl",
+            os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+            dir_fd=directory_fd,
+        )
+        descriptors.append(journal_fd)
+        metadata = os.fstat(journal_fd)
+        if not stat.S_ISREG(metadata.st_mode):
+            raise _error("journal is not a regular file")
+        remaining = metadata.st_size
+        chunks: list[bytes] = []
+        while remaining:
+            chunk = os.read(journal_fd, min(remaining, 1024 * 1024))
+            if not chunk:
+                raise _error("journal was truncated during snapshot")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        events: list[SessionEvent] = []
+        for line in b"".join(chunks).split(b"\n")[:-1]:
+            data = json.loads(line)
+            if not isinstance(data, dict):
+                raise _error("event is not an object")
+            if type(data.get("seq")) is not int or type(data.get("version")) is not int:
+                raise _error("invalid event sequence or version")
+            events.append(SessionEvent.model_validate(data))
+        _validate_events(events, session_id)
+        if events and events[0].type != "session.created":
+            raise _error("first persisted event must be session.created")
+        return events
+    except (OSError, ValueError, TypeError, PersistenceError) as exc:
+        raise PersistenceError("会话快照不可读取：日志不存在、损坏或路径不安全。") from exc
+    finally:
+        for descriptor in reversed(descriptors):
+            os.close(descriptor)
 
 
 def read_session_events(workspace: Path, session_id: str) -> list[SessionEvent]:

@@ -3,29 +3,31 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import signal
 import stat
 import sys
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from contextlib import nullcontext
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 import typer
 from prompt_toolkit import PromptSession
-from prompt_toolkit.completion import CompleteEvent, Completer, Completion, DummyCompleter
-from prompt_toolkit.document import Document
+from prompt_toolkit.completion import DummyCompleter
 from prompt_toolkit.formatted_text import StyleAndTextTuples
 from prompt_toolkit.patch_stdout import patch_stdout
 from rich.console import Console
 from rich.text import Text
 
 from hiro_agent.bootstrap import Harness, create_harness
-from hiro_agent.config import Config, load_config
+from hiro_agent.config import BotConfig, Config, load_config
 from hiro_agent.contracts import AgentService, RunResult
-from hiro_agent.errors import HiroError, RunCancelled
+from hiro_agent.errors import ConfigurationError, HiroError, RunCancelled
+from hiro_agent.kernel_cli import app as kernel_app
 from hiro_agent.presentation import (
     show_assistant_message,
     show_session_header,
@@ -36,34 +38,30 @@ from hiro_agent.session import delete_session, list_sessions
 from hiro_agent.session_picker import SessionPicker
 from hiro_agent.tasks import TaskSummary, list_tasks, summarize_tasks
 from hiro_agent.terminal_ui import TERMINAL_STYLE, TerminalInterface
+from hiro_agent.ui_commands import NAVIGATION_COMMANDS, AgentCommandCompleter, resolve_agent
+
+if TYPE_CHECKING:
+    from hiro_agent.bot_tui import BotTUI
+    from hiro_agent.tui_backend import TuiBackend
 
 app = typer.Typer(help="Hiro：可恢复、支持只读子 Agent 的 Coding Harness", no_args_is_help=False)
+app.add_typer(kernel_app, name="kernel")
 console = Console(highlight=False)
 SLASH_COMMANDS = {
     "/help": "查看帮助",
     "/tasks": "最近一轮子任务",
     "/continue": "继续未完成任务（新预算）",
     "/resume": "选择历史会话，或 /resume 会话ID",
+    **NAVIGATION_COMMANDS,
     "/exit": "退出",
 }
 HELP = " · ".join(f"{command} {description}" for command, description in SLASH_COMMANDS.items())
 HELP += "\n输入 / 显示命令菜单，继续输入可筛选；↑/↓ 选择，Enter 执行，Tab 补全，Esc 关闭。"
 
 
-class SlashCommandCompleter(Completer):
-    def get_completions(
-        self, document: Document, complete_event: CompleteEvent
-    ) -> Iterable[Completion]:
-        prefix = document.text.lstrip()
-        if (
-            document.cursor_position != len(document.text)
-            or not prefix.startswith("/")
-            or any(character.isspace() for character in prefix)
-        ):
-            return
-        for command, description in SLASH_COMMANDS.items():
-            if command.startswith(prefix):
-                yield Completion(command, start_position=-len(prefix), display_meta=description)
+class SlashCommandCompleter(AgentCommandCompleter):
+    def __init__(self, agents: Callable[[], list[tuple[str, str]]] = lambda: []) -> None:
+        super().__init__(SLASH_COMMANDS, agents)
 
 
 class Terminal:
@@ -74,6 +72,7 @@ class Terminal:
         self._transport: asyncio.ReadTransport | None = None
         self.agent: AgentService | None = None
         self.run_display: RunDisplay | None = None
+        self.agent_choices: list[tuple[str, str]] = []
 
     async def read(self, prompt: str, *, approval: bool = False, selection: bool = False) -> str:
         # A pipe transport closes its input file on EOF, but its StreamReader
@@ -103,7 +102,9 @@ class Terminal:
                     message,
                     # None preserves the previous completer on a reused session.
                     completer=(
-                        DummyCompleter() if approval or selection else SlashCommandCompleter()
+                        DummyCompleter()
+                        if approval or selection
+                        else SlashCommandCompleter(lambda: self.agent_choices)
                     ),
                     complete_while_typing=not (approval or selection),
                     reserve_space_for_menu=0,
@@ -371,6 +372,27 @@ def show_opened_session(
         )
 
 
+@dataclass
+class ChatSwitch:
+    mode: Literal["chat", "tui"]
+    session_id: str
+    config: Config
+    target_bot_id: str | None = None
+
+
+def saved_agent_choices(workspace: Path) -> list[tuple[str, str]]:
+    from hiro_agent.bots import BotStore
+    from hiro_agent.kernel_db import KernelDatabase
+
+    if not (workspace / ".hiro-agent" / "kernel.sqlite3").exists():
+        return []
+    return [
+        (bot.bot_id, bot.config.bot.name)
+        for bot in BotStore(KernelDatabase.for_workspace(workspace)).list()
+        if bot.config.bot is not None
+    ]
+
+
 async def chat_loop(
     workspace: Path,
     config: Config,
@@ -378,8 +400,11 @@ async def chat_loop(
     *,
     select_resume: bool = False,
     last: bool = False,
-) -> None:
-    terminal = Terminal()
+    terminal: Terminal | None = None,
+    persist_bot: bool = True,
+) -> ChatSwitch | None:
+    owns_terminal = terminal is None
+    terminal = terminal or Terminal()
     display = RunDisplay(console)
     terminal.run_display = display
 
@@ -392,8 +417,10 @@ async def chat_loop(
         if select_resume or last:
             resume = await select_session(terminal, workspace, last=last)
             if resume is None:
-                return
-        harness = await create_harness(workspace, config, resume, terminal.approve, on_event)
+                return None
+        harness = await create_harness(
+            workspace, config, resume, terminal.approve, on_event, persist_bot=persist_bot
+        )
         terminal.agent = harness.agent
         loop = asyncio.get_running_loop()
         show_opened_session(harness, workspace, config, resumed=resume is not None)
@@ -406,6 +433,7 @@ async def chat_loop(
             )
         while True:
             try:
+                terminal.agent_choices = saved_agent_choices(workspace)
                 text = (await terminal.read("\nhiro> ")).strip()
             except KeyboardInterrupt:
                 continue
@@ -418,6 +446,57 @@ async def chat_loop(
             if text == "/help":
                 console.print(HELP, markup=False)
                 continue
+            command, _, argument = text.partition(" ")
+            if command in NAVIGATION_COMMANDS:
+                try:
+                    if command == "/chat" and not argument:
+                        console.print("当前已在传统聊天；输入 /tui 打开全屏工作台。", markup=False)
+                        continue
+                    if command in {"/chat", "/tui"} and argument:
+                        raise ConfigurationError(f"用法：{command}；切换 Agent 请使用 /agent ID")
+                    target_bot_id = None
+                    if command == "/agent":
+                        if not argument.strip():
+                            if not terminal.agent_choices:
+                                console.print(
+                                    "暂无持久 Agent；输入 /tui 创建默认 Agent。", markup=False
+                                )
+                            for bot_id, name in terminal.agent_choices:
+                                console.print(f"  {bot_id} · {name}", markup=False)
+                            continue
+                        target_bot_id = resolve_agent(argument.strip(), terminal.agent_choices)
+                    elif not sys.stdin.isatty() or not sys.stdout.isatty():
+                        raise ConfigurationError("TUI 需要交互式终端，当前仍在传统聊天")
+                    # A resumed legacy entry point can have acquired a persisted
+                    # identity inside bootstrap; never infer it from a label.
+                    bound = next(
+                        (
+                            e.data["bot_id"]
+                            for e in harness.session.events
+                            if e.type == "session.bot"
+                        ),
+                        None,
+                    )
+                    effective_config = config
+                    if bound is not None:
+                        from hiro_agent.bots import BotStore
+                        from hiro_agent.kernel_db import KernelDatabase
+
+                        effective_config = (
+                            BotStore(KernelDatabase.for_workspace(workspace)).get(bound).config
+                        )
+                    if target_bot_id is not None and bound == target_bot_id:
+                        console.print("当前已在此 Agent 的传统会话中。", markup=False)
+                        continue
+                    return ChatSwitch(
+                        mode="tui" if command == "/tui" else "chat",
+                        session_id=harness.session.session_id,
+                        config=effective_config,
+                        target_bot_id=target_bot_id,
+                    )
+                except (HiroError, ValueError, OSError) as exc:
+                    console.print(str(exc), style="red", markup=False)
+                    continue
             if text.split(maxsplit=1)[0] == "/resume":
                 arguments = text.split(maxsplit=1)
                 target = arguments[1] if len(arguments) == 2 else None
@@ -435,7 +514,12 @@ async def chat_loop(
                         console.print("当前已在此会话中。", markup=False)
                         continue
                     restored = await create_harness(
-                        workspace, config, target, terminal.approve, on_event
+                        workspace,
+                        config,
+                        target,
+                        terminal.approve,
+                        on_event,
+                        persist_bot=persist_bot,
                     )
                 except (HiroError, ValueError, OSError) as exc:
                     console.print(str(exc), style="red", markup=False)
@@ -483,9 +567,170 @@ async def chat_loop(
                 signal.signal(signal.SIGINT, previous_sigint)
     finally:
         display.stop()
-        terminal.close()
+        if owns_terminal:
+            terminal.close()
         if harness is not None:
             await harness.close()
+    return None
+
+
+def configured(path: Path | None, *, mock: bool = False, subagents: bool = False) -> Config:
+    config = load_config(path)
+    # Routing overrides never raise tool permissions or inject process environment.
+    if "HIRO_BASE_URL" in os.environ:
+        config.model.base_url = os.environ["HIRO_BASE_URL"]
+    if "HIRO_MODEL" in os.environ:
+        config.model.model = os.environ["HIRO_MODEL"]
+    if mock:
+        config.model.adapter = "mock"
+    if subagents:
+        config.subagents.enabled = True
+    return config
+
+
+def with_default_bot(config: Config) -> Config:
+    config = config.model_copy(deep=True)
+    if config.bot is None:
+        tools = ["list_files", "read_file", "search_text", "write_file", "edit_file", "run_command"]
+        if config.subagents.enabled:
+            tools.append("delegate_task")
+        config.bot = BotConfig(id="default", name="Hiro", allowed_tools=tuple(tools))
+    return config
+
+
+def ensure_navigation_bot(backend: TuiBackend, config: Config) -> str:
+    config = with_default_bot(config)
+    assert config.bot is not None
+    existing = {bot.bot_id for bot in backend.kernel.bots.list()}
+    if config.bot.id not in existing:
+        try:
+            backend.kernel.bots.save(config, expected_version=0)
+        except ConfigurationError:
+            # Another client may have initialized the same identity. Its saved
+            # permissions take precedence over an implicit startup configuration.
+            backend.kernel.bots.get(config.bot.id)
+    return config.bot.id
+
+
+def prepare_tui_backend(
+    workspace: Path,
+    configs: list[Path] | None,
+    *,
+    demo: bool = False,
+    subagents: bool = False,
+) -> TuiBackend:
+    from hiro_agent.config import ModelConfig
+    from hiro_agent.tui_backend import TuiBackend
+
+    backend = TuiBackend(workspace)
+    loaded = [configured(path, subagents=subagents) for path in configs or []]
+    if len(loaded) > 1 and any(config.bot is None for config in loaded):
+        raise ConfigurationError("导入多个 Agent 时，每份配置都需要不同的 bot.id")
+    for config in loaded:
+        backend.kernel.bots.save(with_default_bot(config))
+    if demo:
+        for bot_id, name in (("demo-a", "Demo A"), ("demo-b", "Demo B")):
+            config = with_default_bot(Config(model=ModelConfig(adapter="mock")))
+            assert config.bot is not None
+            config.bot.id = bot_id
+            config.bot.name = name
+            config.bot.instructions = "离线脚本演示：展示读取、审批写入和验证。"
+            config.subagents.enabled = subagents
+            if subagents:
+                config.bot.allowed_tools += ("delegate_task",)
+            ensure_navigation_bot(backend, config)
+    if not backend.kernel.bots.list():
+        ensure_navigation_bot(backend, configured(None, subagents=subagents))
+    return backend
+
+
+def navigation_source(backend: TuiBackend, config: Config, session_id: str) -> str:
+    """Give an unbound chat its own identity without adopting another Bot's policy."""
+    if config.bot is not None:
+        return ensure_navigation_bot(backend, config)
+    candidate = with_default_bot(config)
+    assert candidate.bot is not None
+    existing = {bot.bot_id: bot for bot in backend.kernel.bots.list()}
+    digest = hashlib.sha256(session_id.encode()).hexdigest()[:24]
+    for index in range(len(existing) + 2):
+        if index == 0 and "default" not in existing:
+            candidate.bot.id = "default"
+        else:
+            candidate.bot.id = f"chat-{digest}" + (f"-{index}" if index > 1 else "")
+            candidate.bot.name = f"Hiro · 会话 {session_id[:8]}"
+        previous = existing.get(candidate.bot.id)
+        if previous is None:
+            try:
+                backend.kernel.bots.save(candidate, expected_version=0)
+                return candidate.bot.id
+            except ConfigurationError:
+                previous = backend.kernel.bots.get(candidate.bot.id)
+        if previous.config == candidate:
+            return candidate.bot.id
+    raise ConfigurationError("无法为旧会话分配独立 Agent，请重试")
+
+
+async def _run_interfaces(
+    workspace: Path,
+    config: Config,
+    resume: str | None,
+    *,
+    interface: BotTUI | None = None,
+    start_worker: bool = True,
+    select_resume: bool = False,
+    last: bool = False,
+) -> None:
+    """Switch sequentially, releasing the old session before opening another UI."""
+    from hiro_agent.bot_tui import BotTUI
+    from hiro_agent.tui_backend import TuiBackend
+
+    mode = "tui" if interface is not None else "chat"
+    backend = interface.backend if interface is not None else None
+    chat_sessions: dict[str, str] = {}
+    persist_bot = True
+    terminal = Terminal()
+    try:
+        while True:
+            if mode == "tui":
+                assert interface is not None
+                await interface.run()
+                if interface.exit_action != "chat":
+                    return
+                assert backend is not None
+                selected = interface.selected_bot_id
+                if selected is None:
+                    selected = ensure_navigation_bot(backend, config)
+                config = backend.kernel.bots.get(selected).config
+                resume = chat_sessions.get(selected)
+                persist_bot = False
+            request = await chat_loop(
+                workspace,
+                config,
+                resume,
+                select_resume=select_resume,
+                last=last,
+                terminal=terminal,
+                persist_bot=persist_bot,
+            )
+            select_resume = last = False
+            if request is None:
+                return
+            if backend is None:
+                backend = TuiBackend(workspace)
+            source = navigation_source(backend, request.config, request.session_id)
+            chat_sessions[source] = request.session_id
+            target = request.target_bot_id or source
+            config = backend.kernel.bots.get(target).config
+            resume = chat_sessions.get(target)
+            persist_bot = False
+            mode = request.mode
+            if mode == "tui":
+                if interface is None:
+                    interface = BotTUI(backend, auto_start_worker=start_worker)
+                await interface.refresh()
+                interface.select_bot(target)
+    finally:
+        terminal.close()
 
 
 def launch(
@@ -497,22 +742,22 @@ def launch(
     *,
     select_resume: bool = False,
     last: bool = False,
+    start_worker: bool = True,
 ) -> None:
     if sys.platform != "linux":
         raise typer.BadParameter("此版本仅支持 Linux")
     try:
-        config = load_config(config_path)
-        # Environment config is deliberately limited to model routing. It never
-        # raises tool permissions or injects child-process environment values.
-        if "HIRO_BASE_URL" in os.environ:
-            config.model.base_url = os.environ["HIRO_BASE_URL"]
-        if "HIRO_MODEL" in os.environ:
-            config.model.model = os.environ["HIRO_MODEL"]
-        if mock:
-            config.model.adapter = "mock"
-        if subagents:
-            config.subagents.enabled = True
-        asyncio.run(chat_loop(workspace, config, resume, select_resume=select_resume, last=last))
+        config = configured(config_path, mock=mock, subagents=subagents)
+        asyncio.run(
+            _run_interfaces(
+                workspace,
+                config,
+                resume,
+                select_resume=select_resume,
+                last=last,
+                start_worker=start_worker,
+            )
+        )
     except (HiroError, ValueError, OSError) as exc:
         console.print(str(exc), style="red", markup=False)
         raise typer.Exit(1) from None
@@ -526,6 +771,10 @@ ConfigOption = Annotated[Path | None, typer.Option("--config", "-c", help="JSON 
 ResumeOption = Annotated[str | None, typer.Option("--resume", help="打开已有 Session")]
 MockOption = Annotated[bool, typer.Option("--mock", help="无需 API Key 的脚本化演示")]
 SubagentsOption = Annotated[bool, typer.Option("--subagents", help="启用探索和审查只读子 Agent")]
+StartWorkerOption = Annotated[
+    bool,
+    typer.Option("--start-worker/--no-start-worker", help="进入 TUI 时自动连接或启动独立 worker"),
+]
 
 
 @app.callback(invoke_without_command=True)
@@ -536,16 +785,29 @@ def main(
     resume: ResumeOption = None,
     mock: MockOption = False,
     subagents: SubagentsOption = False,
+    start_worker: StartWorkerOption = True,
 ) -> None:
+    """交互式终端默认进入 TUI；chat 使用传统聊天，管道和 --resume 保持会话入口。"""
     ctx.obj = {
         "workspace": workspace,
         "config": config,
         "resume": resume,
         "mock": mock,
         "subagents": subagents,
+        "start_worker": start_worker,
     }
     if ctx.invoked_subcommand is None:
-        launch(workspace, config, resume, mock, subagents)
+        if resume is None and sys.stdin.isatty() and sys.stdout.isatty():
+            tui(
+                ctx,
+                workspace=workspace,
+                configs=[config] if config else None,
+                agent=None,
+                demo=mock,
+                start_worker=start_worker,
+            )
+        else:
+            launch(workspace, config, resume, mock, subagents, start_worker=start_worker)
 
 
 def inherited_option(ctx: typer.Context, name: str, value: Any) -> Any:
@@ -553,6 +815,68 @@ def inherited_option(ctx: typer.Context, name: str, value: Any) -> Any:
     if source is not None and source.name == "DEFAULT" and isinstance(ctx.obj, dict):
         return ctx.obj.get(name, value)
     return value
+
+
+@app.command("tui")
+def tui(
+    ctx: typer.Context,
+    workspace: WorkspaceOption = Path("."),
+    configs: Annotated[
+        list[Path] | None,
+        typer.Option("--config", "-c", help="导入 Bot JSON 配置，可重复指定"),
+    ] = None,
+    agent: Annotated[str | None, typer.Option("--agent", help="首次打开的 Bot ID")] = None,
+    demo: Annotated[
+        bool, typer.Option("--demo", "--mock", help="添加两个离线演示 Agent，不覆盖已有配置")
+    ] = False,
+    start_worker: Annotated[
+        bool,
+        typer.Option(
+            "--start-worker/--no-start-worker",
+            help="自动连接或启动独立 worker；退出界面不停止 worker",
+        ),
+    ] = True,
+) -> None:
+    """全屏工作台：左侧切换 Agent，右侧查看消息、提交任务和处理审批。"""
+    from hiro_agent.bot_tui import BotTUI
+
+    if sys.platform != "linux":
+        raise typer.BadParameter("此版本仅支持 Linux")
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        raise typer.BadParameter("TUI 需要交互式终端；管道输入请使用 chat 或 kernel 命令")
+    workspace = inherited_option(ctx, "workspace", workspace)
+    if configs is None and isinstance(ctx.obj, dict) and ctx.obj.get("config") is not None:
+        configs = [ctx.obj["config"]]
+    if isinstance(ctx.obj, dict) and ctx.obj.get("mock"):
+        demo = True
+    try:
+        inherited = ctx.obj if isinstance(ctx.obj, dict) else {}
+        start_worker = inherited_option(ctx, "start_worker", start_worker)
+        backend = prepare_tui_backend(
+            workspace, configs, demo=demo, subagents=bool(inherited.get("subagents"))
+        )
+        if agent is not None:
+            backend.kernel.bots.get(agent)
+
+        async def open_tui() -> None:
+            interface = BotTUI(backend, auto_start_worker=start_worker)
+            await interface.refresh()
+            if agent is not None:
+                interface.select_bot(agent)
+            await _run_interfaces(
+                workspace,
+                configured(None),
+                None,
+                interface=interface,
+                start_worker=start_worker,
+            )
+
+        asyncio.run(open_tui())
+    except (HiroError, ValueError, OSError) as exc:
+        console.print(str(exc), style="red", markup=False)
+        raise typer.Exit(1) from None
+    except KeyboardInterrupt:
+        pass
 
 
 @app.command()
@@ -571,6 +895,7 @@ def chat(
         inherited_option(ctx, "resume", resume),
         inherited_option(ctx, "mock", mock),
         inherited_option(ctx, "subagents", subagents),
+        start_worker=ctx.obj.get("start_worker", True) if isinstance(ctx.obj, dict) else True,
     )
 
 
@@ -598,6 +923,7 @@ def resume(
         inherited_option(ctx, "subagents", subagents),
         select_resume=session_id is None,
         last=last,
+        start_worker=ctx.obj.get("start_worker", True) if isinstance(ctx.obj, dict) else True,
     )
 
 
